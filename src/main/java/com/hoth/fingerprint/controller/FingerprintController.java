@@ -51,7 +51,7 @@ public class FingerprintController {
 			if(accion == null) {
 			}
 			
-//			window = new Enrollment();
+			window = new Enrollment();
 			
 		} catch(Exception ex) {
 			log.error("Problema para obtener el biometrico...", ex);
