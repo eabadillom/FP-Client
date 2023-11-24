@@ -27,6 +27,9 @@ replay_pid*
 .classpath
 .project
 
+# Other files
+.factorypath
+
 # Folders
 bin/
 build/
