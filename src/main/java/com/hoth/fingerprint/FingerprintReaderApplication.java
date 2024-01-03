@@ -4,14 +4,11 @@ import java.awt.Container;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 
-
 import javax.swing.GroupLayout;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -32,7 +29,7 @@ public class FingerprintReaderApplication extends JFrame {
 		
 		EventQueue.invokeLater(() -> {
             FingerprintReaderApplication ex = ctx.getBean(FingerprintReaderApplication.class);
-            ex.setVisible(true);
+            ex.setVisible(false);
         });
 	}
 	
@@ -48,8 +45,6 @@ public class FingerprintReaderApplication extends JFrame {
             System.exit(0);
         });
 
-
-        
         createLayout(quitButton);
         setTitle("Quit button");
         setSize(300, 200);

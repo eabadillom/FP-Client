@@ -1,19 +1,12 @@
 package com.hoth.fingerprint.controller;
 
-import java.awt.Image;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Base64;
-
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,13 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.digitalpersona.uareu.*;
-import com.digitalpersona.uareu.Reader.CaptureQuality;
-import com.digitalpersona.uareu.dpfj.FmdImpl;
-import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.hoth.fingerprint.gui.Capture;
 import com.hoth.fingerprint.gui.Enrollment;
 import com.hoth.fingerprint.gui.Verification;
-import com.hoth.fingerprint.gui.Enrollment.EnrollmentThread.EnrollmentEvent;
 import com.hoth.fingerprint.model.request.Peticion;
 import com.hoth.fingerprint.model.response.BiometricResponse;
 
@@ -37,7 +26,7 @@ import com.hoth.fingerprint.model.response.BiometricResponse;
 public class FingerprintController {
 	private static Logger log = LogManager.getLogger(FingerprintController.class);
 	
-	@GetMapping
+	/*@GetMapping
 	public ResponseEntity<String> readFingerPrint(@RequestParam String accion) {
 		ResponseEntity<String> response = null;
 		
@@ -54,8 +43,9 @@ public class FingerprintController {
 		}
 		
 		return response;
-	}
+	}*/
 	
+	@CrossOrigin("*")
 	@PostMapping
 	public ResponseEntity<BiometricResponse> validateFingerPrint(@RequestBody Peticion json) {
 		ResponseEntity<BiometricResponse> response = null;
@@ -63,11 +53,9 @@ public class FingerprintController {
 		BiometricResponse biometric = null;				
 
 		// ----- Biometricos ----- 
-		Reader.CaptureResult captura ;
+		Reader.CaptureResult captura= null;
 		byte[] biometrico = null;
 		String b64Biometrico = null;
-		String bioEnrolamiento = null;
-		String bioCaptura = null;
 		Fmd fmd = null;
 		
 		try {
@@ -84,7 +72,7 @@ public class FingerprintController {
 
 			switch (accion) {
 				case "Enrollment":
-					//window = new Enrollment();
+				
 					Enrollment.Run();
 					fmd = Enrollment.getFmd();
 					log.info("fmd enrollment: {}", fmd);
@@ -122,7 +110,7 @@ public class FingerprintController {
 					b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
 					log.info("Captura de fmd convertida: {}", b64Biometrico);
 					log.info("Status captura {}", captura.quality);
-					byte[] bytes = b64Biometrico.getBytes();
+					//byte[] bytes = b64Biometrico.getBytes();
 
 					
 
@@ -144,11 +132,12 @@ public class FingerprintController {
 
 					log.info("entre a validar----");
 					log.info("json captura: {}", json.getCaptura());
+					log.info("captura antes de descodificar: {}",capturaFmd);
 					capturaFmd = decodificar(json.getCaptura());
 					log.info("capturaFmd: {}",capturaFmd);
 
-
-					enrolamientoFmd = decodificar(json.getEnrolamiento());
+					log.info("enrolamientoFmd antes: {}",enrolamientoFmd);
+					enrolamientoFmd = decodificar(json.getEnrolamiento());//POSIBLE ERROR
 					log.info("enrolamientoFmd: {}",enrolamientoFmd);
 
 					fmd_s[0] = capturaFmd;
@@ -160,7 +149,7 @@ public class FingerprintController {
 					biometric.setName("Validando");
 					biometric.setResult(918);
 					biometric.setMessage("Huella validada");
-					//biometric.setBiometricData1(b64Biometrico);					
+					biometric.setBiometricData1(b64Biometrico);					
 					biometric.setVerifyBiometricData(true);
 					response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
 					break;
@@ -180,22 +169,28 @@ public class FingerprintController {
 		
 		Fmd fmd = null;
 		byte[] byteHuella = null;
-
-		try{
-			log.info("entre al metodo decodificador");
-			byteHuella = huella.getBytes();
-			//CReamos el fmd en base a los bytes del string 
+		log.info("entre al metodo decodificador");
+		byteHuella = huella.getBytes();
+		log.info("lei huella decodificada bytes {}", byteHuella);
+		//CReamos el fmd en base a los bytes del string
+		
+		try {
+			
 			fmd = UareUGlobal.GetEngine().CreateFmd(byteHuella, 320, 350, 500, 1, 3407615, Fmd.Format.ANSI_378_2004);
-			log.info("Fmd convertido {}", fmd);
-
-			//obtenemos bytes del nuevo fmd
-			byte [] byteH = fmd.getData();	
-			//Convertimos a base64
-			String b64Biometrico2 = new String(Base64.getEncoder().encode(byteH));
-			log.info("b64Biometrico2 del decodificador: {}", b64Biometrico2);
-		}catch(UareUException e){
-			log.info("Error al decodificar huella", e);
+		} catch (UareUException e) {
+			e.printStackTrace();
+			log.info("error al convertir en fmd");
 		}
+		
+
+		log.info("converti los bytes de huella a fmd ");
+		log.info("Fmd convertido {}", fmd);
+
+		//obtenemos bytes del nuevo fmd
+		byte [] byteH = fmd.getData();	
+		//Convertimos a base64
+		String b64Biometrico2 = new String(Base64.getEncoder().encode(byteH));
+		log.info("b64Biometrico2 del decodificador: {}", b64Biometrico2);
 		
 		
 		return fmd;

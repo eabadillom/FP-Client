@@ -102,16 +102,17 @@ public class Enrollment extends JPanel implements ActionListener {
 		}
 
 		public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) {
+			log.info("Levante el lector ....................");
 			Engine.PreEnrollmentFmd prefmd = null;
 
 			while (null == prefmd && !m_bCancel) {
 				// start capture thread
 				m_capture = new EnrollmentCaptureThread(m_reader, false, Fid.Format.ANSI_381_2004,
 						Reader.ImageProcessing.IMG_PROC_DEFAULT);
-				m_capture.start(null);
+				m_capture.start(null);  //Desata el evento de captura para las 4 huellas (diferentes momentos)
 
 				// prompt for finger
-				SendToListener(ACT_PROMPT, null, null, null, null);
+				SendToListener(ACT_PROMPT, null, null, null, null); //Se colocan leyendas iniciales para escanear huella o leyendas secundarias
 
 				// wait till done
 				m_capture.join(0);
@@ -119,6 +120,7 @@ public class Enrollment extends JPanel implements ActionListener {
 				// check result
 				EnrollmentCaptureThread.CaptureEvent evt = m_capture.getLastCaptureEvent();
 				if (null != evt.capture_result) {
+					log.info("La captura es diferente de null");
 					if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
 						// captura cancelada, retorna nulo
 						break;
@@ -137,6 +139,7 @@ public class Enrollment extends JPanel implements ActionListener {
 
 							// send sucess
 							SendToListener(ACT_FEACTURES, null, null, null, null);
+							log.info("Entre al metodo getFmd");
 
 						} catch (UareUException e) {
 							// send extraction error
@@ -152,6 +155,8 @@ public class Enrollment extends JPanel implements ActionListener {
 					SendToListener(ACT_CAPTURE, null, evt.capture_result, evt.reader_status, evt.exception);
 				}
 			}
+
+			log.info("Sali del metodo getFMD para ir al actionperformand");
 
 			return prefmd;
 		}
@@ -189,8 +194,9 @@ public class Enrollment extends JPanel implements ActionListener {
 				m_bCancel = false;
 				while (!m_bCancel) {
 					// run enrolmnet
-					Fmd fmd = engine.CreateEnrollmentFmd(Fmd.Format.ANSI_378_2004, this);
-
+					log.info("Entre al metodo Run para crear el template");
+					Fmd fmd = engine.CreateEnrollmentFmd(Fmd.Format.ANSI_378_2004, this); //llama al metodo GetFmd (en teoria lo debe de llamar 4 veces para hacer el template)
+					log.info("Entre a evaluar si el fmd esta lleno o vacio en el run para template");
 					// enviar resultado
 					if (null != fmd) {
 						SendToListener(ACT_DONE, fmd, null, null, null);
@@ -208,7 +214,6 @@ public class Enrollment extends JPanel implements ActionListener {
 
 	}
 
-	private static final long serialVersionUID = 6;
 	private static final String ACT_Back = "back";
 
 	private EnrollmentThread m_enrollment;
@@ -255,7 +260,7 @@ public class Enrollment extends JPanel implements ActionListener {
 		btnBack.addActionListener(this);
 		add(btnBack);
 		add(Box.createVerticalStrut(vgap));
-		log.info("valor de m_bJustStarted {}", m_bJustStarted);
+		//log.info("valor de m_bJustStarted {}", m_bJustStarted);
 		setOpaque(true);
 	}
 
@@ -266,6 +271,7 @@ public class Enrollment extends JPanel implements ActionListener {
 		EnrollmentThread.EnrollmentEvent evt = (EnrollmentThread.EnrollmentEvent) e;
 		
 		if (e.getActionCommand().equals(EnrollmentThread.ACT_PROMPT)) {
+			log.info("Entre a la accion ACT_PROMPT...................");
 			if (m_bJustStarted) {
 				m_text.append("Enrollment preparado \n");
 				m_text.append("Coloca tu dedo en el lector \n");
@@ -286,8 +292,10 @@ public class Enrollment extends JPanel implements ActionListener {
 			}
 			m_bJustStarted = false;
 		} else if (e.getActionCommand().equals(EnrollmentThread.ACT_FEACTURES)) {
+			log.info("Entre a la accion ACT_FEACTURES...................");
 			if (null == evt.exception) {
 				m_text.append("fingerprint captured, features extracted \n\n");
+				
 			} else {
 				MessageBox.DpError("Enrollment extraction", evt.exception);
 				//JOptionPane.showMessageDialog(f, "WARNING");
@@ -302,8 +310,9 @@ public class Enrollment extends JPanel implements ActionListener {
 				try {
 					fmd = evt.enrollment_fmd;
 					biometrico = evt.enrollment_fmd.getData();
-					m_enrollment.cancel();
-					m_reader.Close();					
+					//m_enrollment.cancel();
+					m_reader.Close();	
+						
 					m_dlgParent.setVisible(false);
 					
 				} catch (UareUException e1) {						
@@ -327,6 +336,21 @@ public class Enrollment extends JPanel implements ActionListener {
 		}		
 
 	}
+
+	private void StopCaptureThread(){
+		if(null != m_enrollment) m_enrollment.cancel();
+	}
+	
+	private void WaitForCaptureThread(){
+		if(null != m_enrollment)
+			try {
+				m_enrollment.join(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	}
+
 ///revisar abajo
 	private void doModal(JDialog dlgParent) {
 		// open reader
@@ -338,18 +362,28 @@ public class Enrollment extends JPanel implements ActionListener {
 		}
 
 		//COMIENZA ENROLAMIENTO DE HILO
+		log.info("Entro al metodo run de CaptureThread");
 		m_enrollment.start();
 
 		// bring up modal dialog
 		m_dlgParent = dlgParent;
 		m_dlgParent.setContentPane(this);
 		m_dlgParent.pack();
+		m_dlgParent.setAlwaysOnTop(true);
 		m_dlgParent.setLocationRelativeTo(null);
 		m_dlgParent.setVisible(true);
 		m_dlgParent.dispose();
-
 		// stop enrollment thread
-		//m_enrollment.cancel();
+		m_enrollment.cancel();  //CANCELAR DESDE AQUI O DESDE ACT_DONE
+
+		//StopCaptureThread();
+		//WaitForCaptureThread();
+
+		try {
+			UareUGlobal.DestroyReaderCollection();
+		} catch (UareUException e) {
+			MessageBox.DpError("UareUGlobal.destroyReaderCollection()", e);
+		}
 
 		// close reader
 		/*try {
