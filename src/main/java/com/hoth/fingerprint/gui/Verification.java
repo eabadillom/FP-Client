@@ -8,6 +8,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -16,7 +17,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.digitalpersona.uareu.Engine;
-import com.digitalpersona.uareu.Fid;
 import com.digitalpersona.uareu.Fmd;
 import com.digitalpersona.uareu.Reader;
 import com.digitalpersona.uareu.ReaderCollection;
@@ -27,8 +27,6 @@ public class Verification extends JPanel implements ActionListener {
     private static final long serialVersionUID = 6;
     private static final String ACT_BACK = "back";
     private static Logger log = LogManager.getLogger(Verification.class);
-    private EnrollmentCaptureThread m_capture;
-    private Reader m_reader;
     private Fmd[] m_fmds;
     private JDialog m_dlgParent;
     private JTextArea m_text;
@@ -122,14 +120,16 @@ public class Verification extends JPanel implements ActionListener {
                         if (falsematch_rate < target_falsematch_rate) {
                             //m_text.append("FingerPrint matched.\n");
                             log.info("FingerPrint matched.\n" );
-                            String str = String.format("dissimilarity score: 0x%x. \n", falsematch_rate);
+                            JOptionPane.showMessageDialog(null,"FingerPrint matched.\n");
+                            //String str = String.format("dissimilarity score: 0x%x. \n", falsematch_rate);
                             //m_text.append(str);
-                            str = String.format("false match rate: %e \n\n\n",
-                                    (double) (falsematch_rate / Engine.PROBABILITY_ONE));
+                            //str = String.format("false match rate: %e \n\n\n",
+                                    //(double) (falsematch_rate / Engine.PROBABILITY_ONE));
                             //m_text.append(str);
                         } else {
                             //m_text.append("Fingerprints did not match. \n\n\n");
-                            log.info("Fingerprints did not match. \n\n\n" );
+                            JOptionPane.showMessageDialog(null,"FingerPrint did not match.\n");
+                            //log.info("Fingerprints did not match. \n\n\n" );
                         }
                     } catch (UareUException e) {
                         MessageBox.DpError("Engine.CreateFmd()", e);
@@ -161,15 +161,16 @@ public class Verification extends JPanel implements ActionListener {
         ProcessCaptureResult();
 
         // put initial prompt on the screen
-        m_text.append(m_strPropmt1);
+        //m_text.append(m_strPropmt1);
 
         // bring up modal dialog
         m_dlgParent = dlgParent;
         m_dlgParent.setContentPane(this);
         m_dlgParent.pack();
         m_dlgParent.setLocationRelativeTo(null);
+        m_dlgParent.setAlwaysOnTop(true);		
         m_dlgParent.toFront();
-        m_dlgParent.setVisible(true);
+        m_dlgParent.setVisible(false);
         m_dlgParent.dispose();
 
         // cancelar captura

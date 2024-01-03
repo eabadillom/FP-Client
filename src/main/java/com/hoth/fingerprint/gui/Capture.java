@@ -195,7 +195,12 @@ public class Capture extends JPanel implements ActionListener
 			WaitForCaptureThread();
 		}
 		
-		
+		try {
+			UareUGlobal.DestroyReaderCollection();
+		} catch (UareUException e) {
+			MessageBox.DpError("UareUGlobal.destroyReaderCollection()", e);
+		}
+
 	}
 	
 	public static void Run(){

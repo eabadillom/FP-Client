@@ -109,27 +109,36 @@ public class EnrollmentCaptureThread extends Thread {
 			
 			if(bReady){
 				//capture
+				log.info("Iniciando captura de huella para enrolamiento");
+				log.info("format: {}", m_format);
+				log.info("proceso de imagen: {}", m_proc);
+				log.info("lector: {}", m_reader.GetStatus());
+				
+				
 				Reader.CaptureResult cr = m_reader.Capture(m_format, m_proc, m_reader.GetCapabilities().resolutions[0], -1);
+				log.info("captura hecha de enrolamiento");
 				NotifyListener(ACT_CAPTURE, cr, null, null);
 				
 				
 				
-				try {
+				/*try {
 					Thread.sleep(2000);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-				}
+				}*/
 				
 
                 log.info("Huella capturada....");
 				log.info("valor de la huella detectada {}",cr);
-					
+				
 			}
-
 		}
 		catch(UareUException e){
 			NotifyListener(ACT_CAPTURE, null, null, e);
 		}
+		
+		
+
 	}
 
 	
