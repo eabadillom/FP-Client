@@ -1,5 +1,6 @@
 package com.hoth.fingerprint.controller;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Base64;
 
 import org.apache.logging.log4j.LogManager;
@@ -83,7 +84,7 @@ public class FingerprintController {
 					
 
 					biometric = new BiometricResponse();
-					biometric.setName("Enrollamiento");
+					biometric.setName("Enrolamiento");
 					biometric.setResult(918);
 					biometric.setMessage("Error en el proceso");
 					biometric.setLastCodeError(8001);
@@ -130,6 +131,8 @@ public class FingerprintController {
 					Fmd capturaFmd = null;
 					Fmd enrolamientoFmd = null;
 
+					boolean match;
+
 					log.info("entre a validar----");
 					log.info("json captura: {}", json.getCaptura());
 					log.info("captura antes de descodificar: {}",capturaFmd);
@@ -137,6 +140,7 @@ public class FingerprintController {
 					log.info("capturaFmd: {}",capturaFmd);
 
 					log.info("enrolamientoFmd antes: {}",enrolamientoFmd);
+					log.info("huella enrollment {}",json.getEnrolamiento());
 					enrolamientoFmd = decodificar(json.getEnrolamiento());//POSIBLE ERROR
 					log.info("enrolamientoFmd: {}",enrolamientoFmd);
 
@@ -144,13 +148,13 @@ public class FingerprintController {
 					fmd_s[1] = enrolamientoFmd;
 
 					Verification.Run(fmd_s);
-
+					match = Verification.isFinger_M();
 					biometric = new BiometricResponse();
-					biometric.setName("Validando");
+					biometric.setName("Validar");
 					biometric.setResult(918);
 					biometric.setMessage("Huella validada");
 					biometric.setBiometricData1(b64Biometrico);					
-					biometric.setVerifyBiometricData(true);
+					biometric.setVerifyBiometricData(match);
 					response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
 					break;
 
@@ -170,16 +174,22 @@ public class FingerprintController {
 		Fmd fmd = null;
 		byte[] byteHuella = null;
 		log.info("entre al metodo decodificador");
-		byteHuella = huella.getBytes();
-		log.info("lei huella decodificada bytes {}", byteHuella);
+		
 		//CReamos el fmd en base a los bytes del string
 		
 		try {
-			
-			fmd = UareUGlobal.GetEngine().CreateFmd(byteHuella, 320, 350, 500, 1, 3407615, Fmd.Format.ANSI_378_2004);
+			log.info("descodificare {}", huella);
+			byteHuella = Base64.getDecoder().decode(new String(huella).getBytes("UTF-8"));
+			log.info("descodificada la huellla");
+			//fmd = UareUGlobal.GetEngine().CreateFmd(byteHuella, 320, 350, 500, 1, 3407615, Fmd.Format.ANSI_378_2004);
+			fmd = UareUGlobal.GetImporter().ImportFmd(byteHuella, Fmd.Format.ANSI_378_2004, Fmd.Format.ANSI_378_2004);
 		} catch (UareUException e) {
 			e.printStackTrace();
 			log.info("error al convertir en fmd");
+		} catch (UnsupportedEncodingException e) {
+			log.info("Error al convertir en base 64");
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		
 
@@ -187,10 +197,10 @@ public class FingerprintController {
 		log.info("Fmd convertido {}", fmd);
 
 		//obtenemos bytes del nuevo fmd
-		byte [] byteH = fmd.getData();	
+		/*byte [] byteH = fmd.getData();	
 		//Convertimos a base64
 		String b64Biometrico2 = new String(Base64.getEncoder().encode(byteH));
-		log.info("b64Biometrico2 del decodificador: {}", b64Biometrico2);
+		log.info("b64Biometrico2 del decodificador: {}", b64Biometrico2);*/
 		
 		
 		return fmd;
