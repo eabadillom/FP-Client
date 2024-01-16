@@ -8,11 +8,9 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.digitalpersona.uareu.*;
@@ -25,26 +23,7 @@ import com.hoth.fingerprint.model.response.BiometricResponse;
 @RestController
 @RequestMapping("/finger")
 public class FingerprintController {
-	private static Logger log = LogManager.getLogger(FingerprintController.class);
-	
-	/*@GetMapping
-	public ResponseEntity<String> readFingerPrint(@RequestParam String accion) {
-		ResponseEntity<String> response = null;
-		
-		Enrollment window = null;
-		if(accion == null) {
-		}
-		
-		try {
-			window = new Enrollment();
-		} catch(Exception ex) {
-			ex.printStackTrace();
-		} finally {
-		    response = new ResponseEntity<String>("biometric data...", HttpStatus.OK);
-		}
-		
-		return response;
-	}*/
+	private static Logger log = LogManager.getLogger(FingerprintController.class);	
 	
 	@CrossOrigin("*")
 	@PostMapping
@@ -77,10 +56,10 @@ public class FingerprintController {
 					Enrollment.Run();
 					fmd = Enrollment.getFmd();
 					log.info("fmd enrollment: {}", fmd);
+
 					biometrico = Enrollment.getBiometrico();
 					b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
 					log.info("Biometrico: {}", b64Biometrico);
-
 					
 
 					biometric = new BiometricResponse();
@@ -96,24 +75,18 @@ public class FingerprintController {
 
 				case "Capture":
 				
-
-					Capture.Run();
-					
+					Capture.Run();					
 					captura = Capture.getCaptura();
 					
 					Engine engine = UareUGlobal.GetEngine();
 					fmd = engine.CreateFmd(captura.image, Fmd.Format.ANSI_378_2004);
-					log.info("fmd capture: {}", fmd);
-					//CaptureQuality quality = captura.quality;
-					//Fid fid = captura.image;					
+					log.info("fmd capture: {}", fmd);			
 					
 					biometrico = fmd.getData();
 					b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
 					log.info("Captura de fmd convertida: {}", b64Biometrico);
 					log.info("Status captura {}", captura.quality);
-					//byte[] bytes = b64Biometrico.getBytes();
-
-					
+										
 
 					biometric = new BiometricResponse();
 					biometric.setName("Captura");
@@ -135,7 +108,7 @@ public class FingerprintController {
 
 					log.info("entre a validar----");
 					log.info("json captura: {}", json.getCaptura());
-					log.info("captura antes de descodificar: {}",capturaFmd);
+					
 					capturaFmd = decodificar(json.getCaptura());
 					log.info("capturaFmd: {}",capturaFmd);
 
@@ -149,6 +122,7 @@ public class FingerprintController {
 
 					Verification.Run(fmd_s);
 					match = Verification.isFinger_M();
+
 					biometric = new BiometricResponse();
 					biometric.setName("Validar");
 					biometric.setResult(918);
@@ -178,36 +152,25 @@ public class FingerprintController {
 		//CReamos el fmd en base a los bytes del string
 		
 		try {
+
 			log.info("descodificare {}", huella);
 			byteHuella = Base64.getDecoder().decode(new String(huella).getBytes("UTF-8"));
-			log.info("descodificada la huellla");
-			//fmd = UareUGlobal.GetEngine().CreateFmd(byteHuella, 320, 350, 500, 1, 3407615, Fmd.Format.ANSI_378_2004);
+			log.info("descodificada la huellla");			
 			fmd = UareUGlobal.GetImporter().ImportFmd(byteHuella, Fmd.Format.ANSI_378_2004, Fmd.Format.ANSI_378_2004);
-		} catch (UareUException e) {
+
+		} catch (UareUException e) {			
 			e.printStackTrace();
 			log.info("error al convertir en fmd");
 		} catch (UnsupportedEncodingException e) {
-			log.info("Error al convertir en base 64");
-			// TODO Auto-generated catch block
+			log.info("Error al convertir en base 64");			
 			e.printStackTrace();
 		}
 		
 
 		log.info("converti los bytes de huella a fmd ");
-		log.info("Fmd convertido {}", fmd);
-
-		//obtenemos bytes del nuevo fmd
-		/*byte [] byteH = fmd.getData();	
-		//Convertimos a base64
-		String b64Biometrico2 = new String(Base64.getEncoder().encode(byteH));
-		log.info("b64Biometrico2 del decodificador: {}", b64Biometrico2);*/
-		
+		log.info("Fmd convertido {}", fmd);				
 		
 		return fmd;
 	}
-
-	/*public Fmd obtenerHuellaFmd(String huella) throws UareUException, UnsupportedEncodingException {
-		return UareUGlobal.GetImporter().ImportFmd(huella.getBytes("ISO-8859-1"), Fmd.Format.ANSI_378_2004, Fmd.Format.ANSI_378_2004);
-	}*/
 	
 }

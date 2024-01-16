@@ -9,8 +9,6 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -20,7 +18,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 @SpringBootApplication
 public class FingerprintReaderApplication extends JFrame {
-    private static Logger log = LogManager.getLogger(FingerprintReaderApplication.class);
+    //private static Logger log = LogManager.getLogger(FingerprintReaderApplication.class);
     private static final long serialVersionUID = -3453006228197423647L;
 
 

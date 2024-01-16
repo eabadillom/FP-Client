@@ -38,7 +38,6 @@ public class Verification extends JPanel implements ActionListener {
         return finger_M;
     }
 
-    private final String m_strPropmt1 = "Verification started \n\n";
     private final String m_strPrompt2 = "put the same or any other finger on the reader \n\n";
 
     private Verification(Fmd[] fmd_s) {

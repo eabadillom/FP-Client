@@ -337,7 +337,7 @@ public class Enrollment extends JPanel implements ActionListener {
 
 	}
 
-	private void StopCaptureThread(){
+	/*private void StopCaptureThread(){
 		if(null != m_enrollment) m_enrollment.cancel();
 	}
 	
@@ -349,7 +349,7 @@ public class Enrollment extends JPanel implements ActionListener {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	}
+	}*/
 
 ///revisar abajo
 	private void doModal(JDialog dlgParent) {
