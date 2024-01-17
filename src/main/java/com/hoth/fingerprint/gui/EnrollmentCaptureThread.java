@@ -10,6 +10,8 @@ import org.apache.logging.log4j.Logger;
 import com.digitalpersona.uareu.Fid;
 import com.digitalpersona.uareu.Reader;
 import com.digitalpersona.uareu.UareUException;
+import com.digitalpersona.uareu.Reader.CaptureResult;
+import com.digitalpersona.uareu.Reader.Priority;
 
 public class EnrollmentCaptureThread extends Thread {
 
@@ -112,14 +114,33 @@ public class EnrollmentCaptureThread extends Thread {
 				log.info("Iniciando captura de huella para enrolamiento");
 				log.info("format: {}", m_format);
 				log.info("proceso de imagen: {}", m_proc);
-				log.info("lector: {}", m_reader.GetStatus());
-				
-				
-				Reader.CaptureResult cr = m_reader.Capture(m_format, m_proc, m_reader.GetCapabilities().resolutions[0], -1);
-				log.info("captura hecha de enrolamiento");
-				NotifyListener(ACT_CAPTURE, cr, null, null);
-				
-				
+				log.info("lector: {}", m_reader.GetStatus());//colocar condiciones para el estatus del lector se traba
+				log.info("resolucion {}", m_reader.GetCapabilities().resolutions[0]);
+
+				boolean estado = false;
+
+				while(!estado){
+					if(Reader.ReaderStatus.READY == m_reader.GetStatus().status){
+						log.info("Entre a capturar huellas");
+						try {
+							log.info(estado);
+							log.info("Entrando a try..." );
+							Reader.CaptureResult cr = null;
+							//El notify cacha el error 										
+							log.info(cr);
+							
+							cr = m_reader.Capture(m_format, m_proc, m_reader.GetCapabilities().resolutions[0], -1); //error no funciona correctamente el lector o metodo del lector
+							log.info("captura hecha de enrolamiento");
+							NotifyListener(ACT_CAPTURE, cr, null, null);
+							break;
+						} catch (UareUException e) {
+							estado = true;
+							m_reader.Reset();							
+							e.printStackTrace();
+							log.info("Mala captura de huella enrolment {}", e.getMessage());
+						}
+					}
+				}
 				
 				/*try {
 					Thread.sleep(2000);
@@ -129,7 +150,7 @@ public class EnrollmentCaptureThread extends Thread {
 				
 
                 log.info("Huella capturada....");
-				log.info("valor de la huella detectada {}",cr);
+				//log.info("valor de la huella detectada {}",cr);
 				
 			}
 		}
@@ -222,7 +243,8 @@ public class EnrollmentCaptureThread extends Thread {
 		m_bCancel = true;
 		try{
 			if(!m_bStream) 
-			m_reader.CancelCapture();
+			m_reader.Close();
+			log.info("Cancele captura");
 		}
 		catch(UareUException e){}
 	} 

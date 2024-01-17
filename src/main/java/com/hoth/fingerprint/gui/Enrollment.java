@@ -119,6 +119,7 @@ public class Enrollment extends JPanel implements ActionListener {
 
 				// check result
 				EnrollmentCaptureThread.CaptureEvent evt = m_capture.getLastCaptureEvent();
+				log.info("evento {}", evt.getActionCommand());
 				if (null != evt.capture_result) {
 					log.info("La captura es diferente de null");
 					if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
@@ -152,6 +153,7 @@ public class Enrollment extends JPanel implements ActionListener {
 					}
 				} else {
 					// send capture error
+					log.info("evento ev fue null");
 					SendToListener(ACT_CAPTURE, null, evt.capture_result, evt.reader_status, evt.exception);
 				}
 			}
@@ -192,14 +194,16 @@ public class Enrollment extends JPanel implements ActionListener {
 
 			try {
 				m_bCancel = false;
-				while (!m_bCancel) {
+				while (!m_bCancel) { //entra dos veces
 					// run enrolmnet
 					log.info("Entre al metodo Run para crear el template");
 					Fmd fmd = engine.CreateEnrollmentFmd(Fmd.Format.ANSI_378_2004, this); //llama al metodo GetFmd (en teoria lo debe de llamar 4 veces para hacer el template)
 					log.info("Entre a evaluar si el fmd esta lleno o vacio en el run para template");
 					// enviar resultado
+					//entra a evaluar pero debe de cancelar o cambiar valor de m_bCancel
 					if (null != fmd) {
 						SendToListener(ACT_DONE, fmd, null, null, null);
+						break;//se añadio break
 					} else {
 						SendToListener(ACT_CANCELED, null, null, null, null);
 						break;
@@ -285,7 +289,8 @@ public class Enrollment extends JPanel implements ActionListener {
 				
 			}
 			else if(null != evt.exception){
-				MessageBox.DpError("Captures", evt.exception);
+				MessageBox.DpError(evt.exception.getMessage(), evt.exception); //error 21
+				log.info(evt.exception.getStackTrace());
 			}
 			else if(null != evt.reader_status){
 				MessageBox.BadStatus(evt.reader_status);
@@ -323,10 +328,10 @@ public class Enrollment extends JPanel implements ActionListener {
 				//JOptionPane.showMessageDialog(f, "Error H");
 			}
 			m_bJustStarted = true;
-		} else if (e.getActionCommand().equals(EnrollmentThread.ACT_CANCELED)) {
-			// canceled, destroy dialog
-			m_dlgParent.setVisible(false);
-		}
+			} else if (e.getActionCommand().equals(EnrollmentThread.ACT_CANCELED)) {
+				// canceled, destroy dialog
+				m_dlgParent.setVisible(false);
+			}
 		// cancel enrollment if any exception or bad reader status
 		if (null != evt.exception) {
 			m_dlgParent.setVisible(false);
@@ -375,7 +380,7 @@ public class Enrollment extends JPanel implements ActionListener {
 		m_dlgParent.dispose();
 		// stop enrollment thread
 		m_enrollment.cancel();  //CANCELAR DESDE AQUI O DESDE ACT_DONE
-
+		
 		//StopCaptureThread();
 		//WaitForCaptureThread();
 

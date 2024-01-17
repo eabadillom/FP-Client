@@ -122,6 +122,7 @@ public class FingerprintController {
 
 					Verification.Run(fmd_s);
 					match = Verification.isFinger_M();
+					log.info("Valor de match .............. . . .: {}",match);
 
 					biometric = new BiometricResponse();
 					biometric.setName("Validar");
