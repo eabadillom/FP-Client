@@ -52,7 +52,8 @@ public class FingerprintController {
 
 			switch (accion) {
 				case "Enrollment":
-				
+
+					log.info("Entre a enrolment .........");
 					Enrollment.Run();
 					fmd = Enrollment.getFmd();
 					log.info("fmd enrollment: {}", fmd);
@@ -75,6 +76,7 @@ public class FingerprintController {
 
 				case "Capture":
 				
+				log.info("Entre a capture .......");
 					Capture.Run();					
 					captura = Capture.getCaptura();
 					
@@ -98,7 +100,9 @@ public class FingerprintController {
 					break;
 					
 				case "Validate":
-					
+				
+					log.info("Entre a validate .........");
+
 					//arreglo de biometricos
 					Fmd[] fmd_s = new Fmd[2];
 					Fmd capturaFmd = null;
@@ -134,6 +138,9 @@ public class FingerprintController {
 					break;
 
 					default:
+
+						log.info("ocurrio un error switch .......");
+
 					break;
 			}
 			
