@@ -32,8 +32,13 @@ public class Verification extends JPanel implements ActionListener {
     private JTextArea m_text;
     ReaderCollection m_Collection;
     Reader reader;
+    static boolean finger_M;
 
-    private final String m_strPropmt1 = "Verification started \n\n";
+    
+    public static boolean isFinger_M() {
+        return finger_M;
+    }
+
     private final String m_strPrompt2 = "put the same or any other finger on the reader \n\n";
 
     private Verification(Fmd[] fmd_s) {
@@ -121,6 +126,7 @@ public class Verification extends JPanel implements ActionListener {
                             //m_text.append("FingerPrint matched.\n");
                             log.info("FingerPrint matched.\n" );
                             JOptionPane.showMessageDialog(null,"FingerPrint matched.\n");
+                            finger_M = true;
                             //String str = String.format("dissimilarity score: 0x%x. \n", falsematch_rate);
                             //m_text.append(str);
                             //str = String.format("false match rate: %e \n\n\n",
@@ -129,6 +135,7 @@ public class Verification extends JPanel implements ActionListener {
                         } else {
                             //m_text.append("Fingerprints did not match. \n\n\n");
                             JOptionPane.showMessageDialog(null,"FingerPrint did not match.\n");
+                            finger_M = false;
                             //log.info("Fingerprints did not match. \n\n\n" );
                         }
                     } catch (UareUException e) {

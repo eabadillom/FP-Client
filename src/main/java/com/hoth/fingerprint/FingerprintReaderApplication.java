@@ -20,7 +20,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 @SpringBootApplication
 public class FingerprintReaderApplication extends JFrame {
-    private static Logger log = LogManager.getLogger(FingerprintReaderApplication.class);
+    //private static Logger log = LogManager.getLogger(FingerprintReaderApplication.class);
     private static final long serialVersionUID = -3453006228197423647L;
 
 

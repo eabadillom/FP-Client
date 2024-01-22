@@ -133,6 +133,7 @@ public class Capture extends JPanel implements ActionListener
 				else if(Reader.CaptureQuality.CANCELED == evt.capture_result.quality){
 					//capture or streaming was canceled, just quit
 					bCanceled = true;
+					log.info("cancelado {}",bCanceled);
 				}
 				else{
 					//bad quality

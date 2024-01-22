@@ -23,6 +23,7 @@ import com.digitalpersona.uareu.Reader;
 import com.digitalpersona.uareu.ReaderCollection;
 import com.digitalpersona.uareu.UareUException;
 import com.digitalpersona.uareu.UareUGlobal;
+import com.digitalpersona.uareu.Reader.Priority;
 
 public class Enrollment extends JPanel implements ActionListener {
 	private static Logger log = LogManager.getLogger(Enrollment.class);
@@ -102,7 +103,8 @@ public class Enrollment extends JPanel implements ActionListener {
 		}
 
 		public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) {
-			log.info("Levante el lector ....................");
+			log.info("Levante el lector ....................");			
+
 			Engine.PreEnrollmentFmd prefmd = null;
 
 			while (null == prefmd && !m_bCancel) {
@@ -119,6 +121,7 @@ public class Enrollment extends JPanel implements ActionListener {
 
 				// check result
 				EnrollmentCaptureThread.CaptureEvent evt = m_capture.getLastCaptureEvent();
+				log.info("evento {}", evt.getActionCommand());
 				if (null != evt.capture_result) {
 					log.info("La captura es diferente de null");
 					if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
@@ -152,6 +155,7 @@ public class Enrollment extends JPanel implements ActionListener {
 					}
 				} else {
 					// send capture error
+					log.info("evento ev fue null");
 					SendToListener(ACT_CAPTURE, null, evt.capture_result, evt.reader_status, evt.exception);
 				}
 			}
@@ -192,14 +196,16 @@ public class Enrollment extends JPanel implements ActionListener {
 
 			try {
 				m_bCancel = false;
-				while (!m_bCancel) {
+				while (!m_bCancel) { //entra dos veces
 					// run enrolmnet
 					log.info("Entre al metodo Run para crear el template");
 					Fmd fmd = engine.CreateEnrollmentFmd(Fmd.Format.ANSI_378_2004, this); //llama al metodo GetFmd (en teoria lo debe de llamar 4 veces para hacer el template)
 					log.info("Entre a evaluar si el fmd esta lleno o vacio en el run para template");
 					// enviar resultado
+					//entra a evaluar pero debe de cancelar o cambiar valor de m_bCancel
 					if (null != fmd) {
 						SendToListener(ACT_DONE, fmd, null, null, null);
+						break;//se añadio break
 					} else {
 						SendToListener(ACT_CANCELED, null, null, null, null);
 						break;
@@ -268,8 +274,14 @@ public class Enrollment extends JPanel implements ActionListener {
 	public void actionPerformed(ActionEvent e) {
 		
 		log.info("Entrada para enrolamiento valor m_bJustStarted {}", m_bJustStarted);
-		EnrollmentThread.EnrollmentEvent evt = (EnrollmentThread.EnrollmentEvent) e;
 		
+		if(e.getActionCommand().equals("back")){
+			
+			m_dlgParent.setVisible(false);
+			
+		}else{
+			EnrollmentThread.EnrollmentEvent evt = (EnrollmentThread.EnrollmentEvent) e;
+
 		if (e.getActionCommand().equals(EnrollmentThread.ACT_PROMPT)) {
 			log.info("Entre a la accion ACT_PROMPT...................");
 			if (m_bJustStarted) {
@@ -285,7 +297,8 @@ public class Enrollment extends JPanel implements ActionListener {
 				
 			}
 			else if(null != evt.exception){
-				MessageBox.DpError("Captures", evt.exception);
+				MessageBox.DpError(evt.exception.getMessage(), evt.exception); //error 21
+				log.info(evt.exception.getStackTrace());
 			}
 			else if(null != evt.reader_status){
 				MessageBox.BadStatus(evt.reader_status);
@@ -313,7 +326,7 @@ public class Enrollment extends JPanel implements ActionListener {
 					//m_enrollment.cancel();
 					m_reader.Close();	
 						
-					m_dlgParent.setVisible(false);
+					//m_dlgParent.setVisible(false);
 					
 				} catch (UareUException e1) {						
 					e1.printStackTrace();
@@ -323,10 +336,11 @@ public class Enrollment extends JPanel implements ActionListener {
 				//JOptionPane.showMessageDialog(f, "Error H");
 			}
 			m_bJustStarted = true;
-		} else if (e.getActionCommand().equals(EnrollmentThread.ACT_CANCELED)) {
-			// canceled, destroy dialog
-			m_dlgParent.setVisible(false);
-		}
+			} else if (e.getActionCommand().equals(EnrollmentThread.ACT_CANCELED)) {
+				// canceled, destroy dialog
+				m_dlgParent.setVisible(false);
+			}
+		
 		// cancel enrollment if any exception or bad reader status
 		if (null != evt.exception) {
 			m_dlgParent.setVisible(false);
@@ -334,10 +348,10 @@ public class Enrollment extends JPanel implements ActionListener {
 				&& Reader.ReaderStatus.NEED_CALIBRATION != evt.reader_status.status) {
 			m_dlgParent.setVisible(false);
 		}		
-
+	 }
 	}
 
-	private void StopCaptureThread(){
+	/*private void StopCaptureThread(){
 		if(null != m_enrollment) m_enrollment.cancel();
 	}
 	
@@ -349,7 +363,7 @@ public class Enrollment extends JPanel implements ActionListener {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	}
+	}*/
 
 ///revisar abajo
 	private void doModal(JDialog dlgParent) {
@@ -375,7 +389,7 @@ public class Enrollment extends JPanel implements ActionListener {
 		m_dlgParent.dispose();
 		// stop enrollment thread
 		m_enrollment.cancel();  //CANCELAR DESDE AQUI O DESDE ACT_DONE
-
+		m_dlgParent.setVisible(false);
 		//StopCaptureThread();
 		//WaitForCaptureThread();
 
@@ -395,9 +409,12 @@ public class Enrollment extends JPanel implements ActionListener {
 	}
 
 	public static void Run() {
+		log.info("Entre a metodo run de enrollment el primero");
 		JDialog dlg = new JDialog((JDialog) null, "Enrollment", true);
 		log.info("entrada a enroll: ");
 		Enrollment enrollment = new Enrollment();
 		enrollment.doModal(dlg);
+		dlg.getRootPane();
 	}
+
 }
