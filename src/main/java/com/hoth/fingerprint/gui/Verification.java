@@ -74,45 +74,18 @@ public class Verification extends JPanel implements ActionListener {
         if (e.getActionCommand().equals(ACT_BACK)) {
             // cancelar captura
             m_dlgParent.setVisible(false);
-            //StopCaptureThread();
         }
 
     }
 
-    /*private void StartCaptureThread() {
-        m_capture = new EnrollmentCaptureThread(m_reader, false, Fid.Format.ANSI_381_2004,
-                Reader.ImageProcessing.IMG_PROC_DEFAULT);
-        //m_capture.start(this);
-    }*/
 
-    /*private void StopCaptureThread() {
-        if (null != m_capture)
-            m_capture.cancel();
-    }
-
-    private void WaitForCaptureThread() {
-        if (null != m_capture)
-            m_capture.join(1000);
-    }*/
 
     private boolean ProcessCaptureResult() {//condiciona el evento de captura el cual ya no ocupamos 
         boolean bCanceled = false;
-        
-        //if (null != evt.capture_result) {
-            //if (null != evt.capture_result.image && Reader.CaptureQuality.GOOD == evt.capture_result.quality) {
-                // extract features
+ 
                 Engine engine = UareUGlobal.GetEngine();
 
-                /*try {
-                    Fmd fmd = engine.CreateFmd(evt.capture_result.image, Fmd.Format.ANSI_378_2004);
-                    if (null == m_fmds[0]) {
-                        m_fmds[0] = fmd;
-                    } else if (null == m_fmds[1]) {
-                        m_fmds[1] = fmd;
-                    }
-                } catch (UareUException e) {
-                    MessageBox.DpError("Engine.CreateFmd()", e);
-                }*/
+     
                 if (null != m_fmds[0] && null != m_fmds[1]) {
                     // perfom comparison
                     try {
@@ -123,20 +96,13 @@ public class Verification extends JPanel implements ActionListener {
                         log.info("valor target_falsematch_rate: {}",target_falsematch_rate);
 
                         if (falsematch_rate < target_falsematch_rate) {
-                            //m_text.append("FingerPrint matched.\n");
                             log.info("FingerPrint matched.\n" );
                             JOptionPane.showMessageDialog(null,"FingerPrint matched.\n");
                             finger_M = true;
-                            //String str = String.format("dissimilarity score: 0x%x. \n", falsematch_rate);
-                            //m_text.append(str);
-                            //str = String.format("false match rate: %e \n\n\n",
-                                    //(double) (falsematch_rate / Engine.PROBABILITY_ONE));
-                            //m_text.append(str);
+
                         } else {
-                            //m_text.append("Fingerprints did not match. \n\n\n");
                             JOptionPane.showMessageDialog(null,"FingerPrint did not match.\n");
                             finger_M = false;
-                            //log.info("Fingerprints did not match. \n\n\n" );
                         }
                     } catch (UareUException e) {
                         MessageBox.DpError("Engine.CreateFmd()", e);
@@ -145,8 +111,6 @@ public class Verification extends JPanel implements ActionListener {
                     m_fmds[0] = null;
                     m_fmds[1] = null;
 
-                    // the new loop starts
-                   // m_text.append(m_strPropmt1);
                 } else {
                     m_text.append(m_strPrompt2);
                 }
@@ -156,21 +120,11 @@ public class Verification extends JPanel implements ActionListener {
     }
 
     private void doModal(JDialog dlgParent) {
-        /*try {
-            m_reader.Open(Reader.Priority.COOPERATIVE);
-        } catch (UareUException e) {
-            MessageBox.DpError("Reader.Open()", e);
-        }*/
 
-        // start capture thread
-        //StartCaptureThread();
 
         ProcessCaptureResult();
 
-        // put initial prompt on the screen
-        //m_text.append(m_strPropmt1);
 
-        // bring up modal dialog
         m_dlgParent = dlgParent;
         m_dlgParent.setContentPane(this);
         m_dlgParent.pack();
@@ -180,18 +134,6 @@ public class Verification extends JPanel implements ActionListener {
         m_dlgParent.setVisible(false);
         m_dlgParent.dispose();
 
-        // cancelar captura
-        //StopCaptureThread();
-
-        // Wait for capture thread to finish
-        //WaitForCaptureThread();
-
-        // cerrar lector
-        /*try {
-            m_reader.Close();
-        } catch (UareUException e) {
-            MessageBox.DpError("Reader.Close()", e);
-        }*/
     }
 
     public static void Run(Fmd[] fmd_s) {
