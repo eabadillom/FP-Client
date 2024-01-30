@@ -1,7 +1,15 @@
 package com.hoth.fingerprint.controller;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,9 +22,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.digitalpersona.uareu.*;
+import com.google.gson.Gson;
 import com.hoth.fingerprint.gui.Capture;
 import com.hoth.fingerprint.gui.Enrollment;
 import com.hoth.fingerprint.gui.Verification;
+import com.hoth.fingerprint.model.request.JsonRespuesta;
 import com.hoth.fingerprint.model.request.Peticion;
 import com.hoth.fingerprint.model.response.BiometricResponse;
 
@@ -103,12 +113,17 @@ public class FingerprintController {
 				
 					log.info("Entre a validate .........");
 
+					
 					//arreglo de biometricos
 					Fmd[] fmd_s = new Fmd[2];
 					Fmd capturaFmd = null;
 					Fmd enrolamientoFmd = null;
-
+					JsonRespuesta jsonValidate = null;
 					boolean match;
+
+					jsonValidate = connectionChallengeServlet();
+
+					log.info("Datos de json servlet {}", jsonValidate.getToken() );
 
 					log.info("entre a validar----");
 					log.info("json captura: {}", json.getCaptura());
@@ -135,6 +150,9 @@ public class FingerprintController {
 					biometric.setBiometricData1(b64Biometrico);					
 					biometric.setVerifyBiometricData(match);
 					response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
+
+					//System.out.println("json...."+jsonValidate);
+
 					break;
 
 					default:
@@ -142,6 +160,9 @@ public class FingerprintController {
 						log.info("ocurrio un error switch .......");
 
 					break;
+
+					
+
 			}
 			
 		} catch(Exception ex) {
@@ -179,6 +200,65 @@ public class FingerprintController {
 		log.info("Fmd convertido {}", fmd);				
 		
 		return fmd;
+	}
+
+	public JsonRespuesta connectionChallengeServlet(){
+
+		URL url = null;    
+		HttpURLConnection con = null;
+		String json = null;
+		JsonRespuesta jsonR = null;
+
+			try {
+
+				url = new URL("http://192.168.1.70:8080/sgp/challenge?idFpClient=1&numeroEmpleado=0027&password=asfgert222");
+
+
+				con = (HttpURLConnection) url.openConnection();
+				con.setRequestMethod("POST");
+				con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");                 
+				con.setRequestProperty("Accept", "application/json");
+				con.setRequestProperty("dataType","json" );				
+				con.setDoInput(true);
+				con.setDoOutput(true);
+				
+				
+				/*String jsonInputString = "{\n\"idFpClient\":\"FP_PLANTA1\",\n\"password\":\"XDFSREFAT54\",\n numeroEmpleado:\"0027\"\n}";
+				log.info("Json: {}", jsonInputString);
+				
+				OutputStreamWriter wr = new OutputStreamWriter(con.getOutputStream());
+				wr.write(jsonInputString);
+				wr.flush();*/
+				
+				log.info(con.getURL());
+				
+
+
+				StringBuilder sb = new StringBuilder();  
+				int HttpResult = con.getResponseCode(); 
+				System.out.println("Http........." + HttpResult);
+
+				if (HttpResult == HttpURLConnection.HTTP_CREATED) {
+					BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream(), "utf-8"));
+					String line = null;  
+					while ((line = br.readLine()) != null) {  
+						sb.append(line + "\n");  
+					}
+					br.close();
+					json = sb.toString();
+					jsonR = new Gson().fromJson(json, JsonRespuesta.class);
+					//log.info("Numero de empleado accesos ..... {}", jsonR.getNumEmpleado());
+					System.out.println("" + sb.toString());  
+				} else {
+					System.out.println("Respuesta no satisfactoria" + con.getResponseMessage());  
+				}  
+
+
+		}catch(Exception e){
+			log.info(e.getMessage());
+		}
+
+		return jsonR;
 	}
 	
 }
