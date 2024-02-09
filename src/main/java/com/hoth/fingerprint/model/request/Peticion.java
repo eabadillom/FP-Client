@@ -8,6 +8,16 @@ public class Peticion {
 
     private String captura;
 
+    private String numeroEmpleado;
+
+    public String getNumeroEmpleado() {
+        return numeroEmpleado;
+    }
+
+    public void setNumeroEmpleado(String numeroEmpleado) {
+        this.numeroEmpleado = numeroEmpleado;
+    }
+
     public String getEnrolamiento() {
         return enrolamiento;
     }

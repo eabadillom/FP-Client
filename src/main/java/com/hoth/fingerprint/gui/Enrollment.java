@@ -23,7 +23,6 @@ import com.digitalpersona.uareu.Reader;
 import com.digitalpersona.uareu.ReaderCollection;
 import com.digitalpersona.uareu.UareUException;
 import com.digitalpersona.uareu.UareUGlobal;
-import com.digitalpersona.uareu.Reader.Priority;
 
 public class Enrollment extends JPanel implements ActionListener {
 	private static Logger log = LogManager.getLogger(Enrollment.class);

@@ -43,7 +43,7 @@ public class Verification extends JPanel implements ActionListener {
 
     private Verification(Fmd[] fmd_s) {
 
-        m_fmds = new Fmd[2];
+        m_fmds = new Fmd[3];
         m_fmds = fmd_s;
 
         final int vgap = 5;
@@ -86,22 +86,23 @@ public class Verification extends JPanel implements ActionListener {
                 Engine engine = UareUGlobal.GetEngine();
 
      
-                if (null != m_fmds[0] && null != m_fmds[1]) {
+                if (null != m_fmds[0] && null != m_fmds[1] && null != m_fmds[2]) {
                     // perfom comparison
                     try {
                         int falsematch_rate = engine.Compare(m_fmds[0], 0, m_fmds[1], 0);
+                        int falsematch_rate2 = engine.Compare(m_fmds[0], 0, m_fmds[2],0);
                         int target_falsematch_rate = Engine.PROBABILITY_ONE / 1000; // target rate is 0.00001
 
                         log.info("valor falsematch_rate: {}",falsematch_rate);
                         log.info("valor target_falsematch_rate: {}",target_falsematch_rate);
 
-                        if (falsematch_rate < target_falsematch_rate) {
+                        if (falsematch_rate < target_falsematch_rate || falsematch_rate2 < target_falsematch_rate) {
                             log.info("FingerPrint matched.\n" );
-                            JOptionPane.showMessageDialog(null,"FingerPrint matched.\n");
+                            //JOptionPane.showMessageDialog(null,"FingerPrint matched.\n");
                             finger_M = true;
-
+                            
                         } else {
-                            JOptionPane.showMessageDialog(null,"FingerPrint did not match.\n");
+                            //JOptionPane.showMessageDialog(null,"FingerPrint did not match.\n");
                             finger_M = false;
                         }
                     } catch (UareUException e) {
@@ -110,6 +111,7 @@ public class Verification extends JPanel implements ActionListener {
                     // discard FMDs
                     m_fmds[0] = null;
                     m_fmds[1] = null;
+                    m_fmds[2] = null;
 
                 } else {
                     m_text.append(m_strPrompt2);

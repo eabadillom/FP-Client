@@ -1,15 +1,13 @@
 package com.hoth.fingerprint.controller;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.Base64;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Properties;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -50,16 +48,8 @@ public class FingerprintController {
 		
 		try {
 
-			log.info("json finger: {}", json.toString());
-
-			log.info("JSON recibido: {}", json.getTpAccion());
-			
 			accion = json.getTpAccion();
-
-			log.info("Accion de lector: {} ", accion);
 			
-			
-
 			switch (accion) {
 				case "Enrollment":
 
@@ -98,7 +88,7 @@ public class FingerprintController {
 					b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
 					log.info("Captura de fmd convertida: {}", b64Biometrico);
 					log.info("Status captura {}", captura.quality);
-										
+					
 
 					biometric = new BiometricResponse();
 					biometric.setName("Captura");
@@ -115,32 +105,44 @@ public class FingerprintController {
 
 					
 					//arreglo de biometricos
-					Fmd[] fmd_s = new Fmd[2];
+					Fmd[] fmd_s = new Fmd[3];
 					Fmd capturaFmd = null;
-					Fmd enrolamientoFmd = null;
+					//Fmd enrolamientoFmd = null;
 					JsonRespuesta jsonValidate = null;
+					String validateHuella = null;
+					String validateHuella2 = null;
 					boolean match;
+					Fmd huella = null;
+					Fmd huella2 = null;
+					String numeroEmpleado = json.getNumeroEmpleado();
+					
+					jsonValidate = connectionChallengeServlet(numeroEmpleado);
 
-					jsonValidate = connectionChallengeServlet();
 
-					log.info("Datos de json servlet {}", jsonValidate.getToken() );
+					//log.info("Datos de json servlet {}", jsonValidate.getToken() );
 
 					log.info("entre a validar----");
 					log.info("json captura: {}", json.getCaptura());
 					
 					capturaFmd = decodificar(json.getCaptura());
-					log.info("capturaFmd: {}",capturaFmd);
-
-					log.info("enrolamientoFmd antes: {}",enrolamientoFmd);
-					log.info("huella enrollment {}",json.getEnrolamiento());
-					enrolamientoFmd = decodificar(json.getEnrolamiento());//POSIBLE ERROR
-					log.info("enrolamientoFmd: {}",enrolamientoFmd);
-
+					log.info("capturaFmd: {}",capturaFmd);					
+					
+					validateHuella = jsonValidate.getHuella();
+					log.info("validateHuella {}",validateHuella);
+					validateHuella2 = jsonValidate.getHuella2();
+					log.info("validateHuella2 {}",validateHuella2);
+					huella = decodificar(validateHuella);
+					log.info("huella {}",huella);
+					huella2 = decodificar(validateHuella2);
+					log.info("huella2 {}",huella2);
+					
 					fmd_s[0] = capturaFmd;
-					fmd_s[1] = enrolamientoFmd;
-
+					fmd_s[1] = huella;
+					fmd_s[2] = huella2;
+					
 					Verification.Run(fmd_s);
 					match = Verification.isFinger_M();
+
 					log.info("Valor de match .............. . . .: {}",match);
 
 					biometric = new BiometricResponse();
@@ -149,9 +151,13 @@ public class FingerprintController {
 					biometric.setMessage("Huella validada");
 					biometric.setBiometricData1(b64Biometrico);					
 					biometric.setVerifyBiometricData(match);
+					
+					if(match == true){
+						biometric.setToken(jsonValidate.getToken());
+					}else{
+						biometric.setToken(null);
+					}	
 					response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
-
-					//System.out.println("json...."+jsonValidate);
 
 					break;
 
@@ -160,9 +166,6 @@ public class FingerprintController {
 						log.info("ocurrio un error switch .......");
 
 					break;
-
-					
-
 			}
 			
 		} catch(Exception ex) {
@@ -202,16 +205,35 @@ public class FingerprintController {
 		return fmd;
 	}
 
-	public JsonRespuesta connectionChallengeServlet(){
+	public JsonRespuesta connectionChallengeServlet(String numeroEmp){
 
 		URL url = null;    
 		HttpURLConnection con = null;
 		String json = null;
 		JsonRespuesta jsonR = null;
 
+		//CARGAR PROPIEDADES DE APPPLICATION.PROPERTIES
+		Properties properties = null;
+		InputStream in = null;
+		String urlSGP = null;
+		String idFpClient = null;
+		String password = null;
+
 			try {
 
-				url = new URL("http://192.168.1.70:8080/sgp/challenge?idFpClient=1&numeroEmpleado=0027&password=asfgert222");
+				properties = new Properties();
+				in = getClass().getResourceAsStream("/application.properties");
+				properties.load(in);
+
+				urlSGP = properties.getProperty("sgp.url");
+				idFpClient = properties.getProperty("idFpClient");
+				password = properties.getProperty("password");
+
+				log.info("ESTE ES EL NUMERO DE EMPLEADO {}", numeroEmp);
+
+				url = new URL(urlSGP+"/sgp/challenge?idFpClient="+idFpClient+"&numeroEmpleado="+numeroEmp+"&password="+password);
+
+				//url = new URL("http://192.168.1.70:8080/sgp/challenge?idFpClient=1&numeroEmpleado=0027&password=asfgert222");
 
 
 				con = (HttpURLConnection) url.openConnection();
@@ -221,17 +243,7 @@ public class FingerprintController {
 				con.setRequestProperty("dataType","json" );				
 				con.setDoInput(true);
 				con.setDoOutput(true);
-				
-				
-				/*String jsonInputString = "{\n\"idFpClient\":\"FP_PLANTA1\",\n\"password\":\"XDFSREFAT54\",\n numeroEmpleado:\"0027\"\n}";
-				log.info("Json: {}", jsonInputString);
-				
-				OutputStreamWriter wr = new OutputStreamWriter(con.getOutputStream());
-				wr.write(jsonInputString);
-				wr.flush();*/
-				
 				log.info(con.getURL());
-				
 
 
 				StringBuilder sb = new StringBuilder();  
