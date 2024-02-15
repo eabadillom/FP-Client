@@ -9,15 +9,20 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
+
+
 @SpringBootApplication
 public class FingerprintReaderApplication extends JFrame {
+    //private static Logger log = LogManager.getLogger(FingerprintReaderApplication.class);
+    private static final long serialVersionUID = -3453006228197423647L;
 
-	private static final long serialVersionUID = -3453006228197423647L;
 
 	public static void main(String[] args) {
 		//SpringApplication.run(FingerprintReaderApplication.class, args);
@@ -26,7 +31,7 @@ public class FingerprintReaderApplication extends JFrame {
 		
 		EventQueue.invokeLater(() -> {
             FingerprintReaderApplication ex = ctx.getBean(FingerprintReaderApplication.class);
-            ex.setVisible(true);
+            ex.setVisible(false);
         });
 	}
 	
@@ -43,11 +48,12 @@ public class FingerprintReaderApplication extends JFrame {
         });
 
         createLayout(quitButton);
-
         setTitle("Quit button");
         setSize(300, 200);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+
     }
 	
 	private void createLayout(JComponent... arg) {
