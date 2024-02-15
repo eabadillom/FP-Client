@@ -1,5 +1,6 @@
 package com.hoth.fingerprint.model.response;
 
+
 public class BiometricResponse {
 	String Name = null;
 	Integer Result = null;
@@ -9,9 +10,15 @@ public class BiometricResponse {
     String BiometricData1 = null;
     String BiometricData2 = null;
     Boolean VerifyBiometricData = false;
-    
+    String token = null;
 	
-    public String getName() {
+    public String getToken() {
+		return token;
+	}
+	public void setToken(String token) {
+		this.token = token;
+	}
+	public String getName() {
 		return Name;
 	}
 	public void setName(String name) {
@@ -59,4 +66,5 @@ public class BiometricResponse {
 	public void setVerifyBiometricData(Boolean verifyBiometricData) {
 		VerifyBiometricData = verifyBiometricData;
 	}
+	
 }
