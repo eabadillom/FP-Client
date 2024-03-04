@@ -93,11 +93,11 @@ public class Verification extends JPanel implements ActionListener {
                         int falsematch_rate2 = engine.Compare(m_fmds[0], 0, m_fmds[2],0);
                         int target_falsematch_rate = Engine.PROBABILITY_ONE / 1000; // target rate is 0.00001
 
-                        log.info("valor falsematch_rate: {}",falsematch_rate);
-                        log.info("valor target_falsematch_rate: {}",target_falsematch_rate);
+                        log.debug("valor falsematch_rate: {}",falsematch_rate);
+                        log.debug("valor target_falsematch_rate: {}",target_falsematch_rate);
 
                         if (falsematch_rate < target_falsematch_rate || falsematch_rate2 < target_falsematch_rate) {
-                            log.info("FingerPrint matched.\n" );
+                            log.info("FingerPrint matched." );
                             //JOptionPane.showMessageDialog(null,"FingerPrint matched.\n");
                             finger_M = true;
                             

@@ -31,7 +31,7 @@ public class SimpleCorsFilter implements Filter {
 			throws IOException, ServletException {
 		HttpServletResponse response = (HttpServletResponse) res;
 		HttpServletRequest request = (HttpServletRequest) req;
-		log.info("Agregando encabezados para CORS...");
+		log.debug("Agregando encabezados para CORS...");
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
 		response.setHeader("Access-Control-Max-Age", "12000");

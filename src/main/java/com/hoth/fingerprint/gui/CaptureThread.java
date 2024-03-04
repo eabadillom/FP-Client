@@ -84,7 +84,7 @@ public class CaptureThread extends Thread {
 			//wait for reader to become ready
 			boolean bReady = false;
 			while(!bReady && !m_bCancel){
-				log.info("estado del lector: {}",m_reader.GetStatus());
+				log.debug("estado del lector: {}",m_reader.GetStatus());
 				Reader.Status rs = m_reader.GetStatus();
 				if(Reader.ReaderStatus.BUSY == rs.status){
 					//if busy, wait a bit
@@ -100,7 +100,7 @@ public class CaptureThread extends Thread {
 				else if(Reader.ReaderStatus.READY == rs.status || Reader.ReaderStatus.NEED_CALIBRATION == rs.status){
 					//ready for capture
 					bReady = true;
-                    log.info("inicia lector");
+                    log.debug("inicia lector");
 					break;
 				}
 				else{
@@ -133,7 +133,7 @@ public class CaptureThread extends Thread {
 				labelRp.setFont(new Font("Tahoma", Font.BOLD, 18));						
 				dialogo.add(labelRp);
 				dialogo.revalidate();
-				log.info("Componente del dialogo: {}", dialogo.getComponent(0));
+				log.trace("Componente del dialogo: {}", dialogo.getComponent(0));
 				
 				
 				try {
@@ -146,8 +146,8 @@ public class CaptureThread extends Thread {
 				dialogo.setVisible(false);
 				
 
-                log.info("Huella capturada....");
-				log.info("valor de la huella detectada {}",cr);
+                log.debug("Huella capturada....");
+				log.trace("valor de la huella detectada {}",cr);
 					
 			}
 

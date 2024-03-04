@@ -76,18 +76,18 @@ public class FingerprintController {
 
 				case "Capture":
 				
-				log.info("Entre a capture .......");
+				log.info("Capturando biometrico...");
 					Capture.Run();					
 					captura = Capture.getCaptura();
 					
 					Engine engine = UareUGlobal.GetEngine();
 					fmd = engine.CreateFmd(captura.image, Fmd.Format.ANSI_378_2004);
-					log.info("fmd capture: {}", fmd);			
+					log.trace("fmd capture: {}", fmd);			
 					
 					biometrico = fmd.getData();
 					b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
-					log.info("Captura de fmd convertida: {}", b64Biometrico);
-					log.info("Status captura {}", captura.quality);
+					log.trace("Captura de fmd convertida: {}", b64Biometrico);
+					log.trace("Status captura {}", captura.quality);
 					
 
 					biometric = new BiometricResponse();
@@ -97,13 +97,12 @@ public class FingerprintController {
 					biometric.setBiometricData1(b64Biometrico);					
 					biometric.setVerifyBiometricData(true);
 					response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
+					log.debug("Terminando captura de biometrico.");
 					break;
 					
 				case "Validate":
 				
-					log.info("Entre a validate .........");
-
-					
+					log.debug("Iniciando validacion...");
 					//arreglo de biometricos
 					Fmd[] fmd_s = new Fmd[3];
 					Fmd capturaFmd = null;
@@ -121,20 +120,20 @@ public class FingerprintController {
 
 					//log.info("Datos de json servlet {}", jsonValidate.getToken() );
 
-					log.info("entre a validar----");
-					log.info("json captura: {}", json.getCaptura());
+					log.info("Validando biometricos...");
+					log.debug("json captura: {}", json.getCaptura());
 					
 					capturaFmd = decodificar(json.getCaptura());
-					log.info("capturaFmd: {}",capturaFmd);					
+					log.debug("capturaFmd: {}",capturaFmd);					
 					
 					validateHuella = jsonValidate.getHuella();
-					log.info("validateHuella {}",validateHuella);
+					log.trace("validateHuella {}",validateHuella);
 					validateHuella2 = jsonValidate.getHuella2();
-					log.info("validateHuella2 {}",validateHuella2);
+					log.trace("validateHuella2 {}",validateHuella2);
 					huella = decodificar(validateHuella);
-					log.info("huella {}",huella);
+					log.trace("huella {}",huella);
 					huella2 = decodificar(validateHuella2);
-					log.info("huella2 {}",huella2);
+					log.trace("huella2 {}",huella2);
 					
 					fmd_s[0] = capturaFmd;
 					fmd_s[1] = huella;
@@ -143,7 +142,7 @@ public class FingerprintController {
 					Verification.Run(fmd_s);
 					match = Verification.isFinger_M();
 
-					log.info("Valor de match .............. . . .: {}",match);
+					log.trace("Valor de match .............. . . .: {}",match);
 
 					biometric = new BiometricResponse();
 					biometric.setName("Validar");
@@ -179,28 +178,26 @@ public class FingerprintController {
 		
 		Fmd fmd = null;
 		byte[] byteHuella = null;
-		log.info("entre al metodo decodificador");
+		log.debug("entre al metodo decodificador");
 		
-		//CReamos el fmd en base a los bytes del string
+		//Creamos el fmd en base a los bytes del string
 		
 		try {
-
-			log.info("descodificare {}", huella);
+			log.debug("descodificare {}", huella);
 			byteHuella = Base64.getDecoder().decode(new String(huella).getBytes("UTF-8"));
-			log.info("descodificada la huellla");			
+			log.debug("descodificada la huellla");
+			log.debug("byeHuella: {}", byteHuella);
 			fmd = UareUGlobal.GetImporter().ImportFmd(byteHuella, Fmd.Format.ANSI_378_2004, Fmd.Format.ANSI_378_2004);
 
 		} catch (UareUException e) {			
-			e.printStackTrace();
-			log.info("error al convertir en fmd");
+			log.error("error al convertir en fmd", e);
 		} catch (UnsupportedEncodingException e) {
-			log.info("Error al convertir en base 64");			
-			e.printStackTrace();
+			log.error("Error al convertir en base 64", e);
 		}
 		
 
-		log.info("converti los bytes de huella a fmd ");
-		log.info("Fmd convertido {}", fmd);				
+		log.debug("converti los bytes de huella a fmd ");
+		log.debug("Fmd convertido {}", fmd);				
 		
 		return fmd;
 	}
@@ -229,12 +226,10 @@ public class FingerprintController {
 				idFpClient = properties.getProperty("idFpClient");
 				password = properties.getProperty("password");
 
-				log.info("ESTE ES EL NUMERO DE EMPLEADO {}", numeroEmp);
+				log.debug("ESTE ES EL NUMERO DE EMPLEADO {}", numeroEmp);
 
 				url = new URL(urlSGP+"/sgp/challenge?idFpClient="+idFpClient+"&numeroEmpleado="+numeroEmp+"&password="+password);
-
-				//url = new URL("http://192.168.1.70:8080/sgp/challenge?idFpClient=1&numeroEmpleado=0027&password=asfgert222");
-
+				log.trace("Conectando a {} ...", url);
 
 				con = (HttpURLConnection) url.openConnection();
 				con.setRequestMethod("POST");
@@ -243,12 +238,10 @@ public class FingerprintController {
 				con.setRequestProperty("dataType","json" );				
 				con.setDoInput(true);
 				con.setDoOutput(true);
-				log.info(con.getURL());
-
-
+				
 				StringBuilder sb = new StringBuilder();  
 				int HttpResult = con.getResponseCode(); 
-				System.out.println("Http........." + HttpResult);
+				log.trace("Http..." + HttpResult);
 
 				if (HttpResult == HttpURLConnection.HTTP_CREATED) {
 					BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream(), "utf-8"));
@@ -259,15 +252,14 @@ public class FingerprintController {
 					br.close();
 					json = sb.toString();
 					jsonR = new Gson().fromJson(json, JsonRespuesta.class);
-					//log.info("Numero de empleado accesos ..... {}", jsonR.getNumEmpleado());
-					System.out.println("" + sb.toString());  
+					log.debug("JSON Respuesta: {}", sb.toString());  
 				} else {
-					System.out.println("Respuesta no satisfactoria" + con.getResponseMessage());  
+					log.info("Respuesta no satisfactoria: {}", con.getResponseMessage());  
 				}  
 
 
 		}catch(Exception e){
-			log.info(e.getMessage());
+			log.error("Problema al realizar la validación del usuario...", e);
 		}
 
 		return jsonR;

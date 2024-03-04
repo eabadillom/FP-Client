@@ -47,13 +47,13 @@ public class Capture extends JPanel implements ActionListener
         try {
             m_Collection = UareUGlobal.GetReaderCollection();
             m_Collection.GetReaders();
-            log.info("Tamaño Mcollection: {}",m_Collection.size());
-            log.info("Nombre del lector es: {}", m_Collection.get(0).GetDescription().name);
+            log.trace("Tamaño Mcollection: {}",m_Collection.size());
+            log.debug("Nombre del lector es: {}", m_Collection.get(0).GetDescription().name);
     
             m_reader = m_Collection.get(0);
             
         } catch (UareUException e) {
-            log.info("UareUGlobal.getReaderCollection() {}", e);		
+            log.error("UareUGlobal.getReaderCollection() {}", e);		
                 return;
         }
 		
@@ -80,18 +80,19 @@ public class Capture extends JPanel implements ActionListener
 		
 	}
 
-	private void StartCaptureThread(JDialog dlg){
+	private void StartCaptureThread(JDialog dlg) {
 		JLabel labelstart = new JLabel();
-		if(m_capture != null){
+		if (m_capture != null) {
 			try {
-				m_capture = new CaptureThread(m_reader, m_bStreaming, Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT);
-		m_capture.start(this,dlg);
-		labelstart.setText("Escanea tu huella.......");
-		
+				m_capture = new CaptureThread(m_reader, m_bStreaming, Fid.Format.ANSI_381_2004,
+						Reader.ImageProcessing.IMG_PROC_DEFAULT);
+				m_capture.start(this, dlg);
+				labelstart.setText("Escanea tu huella.......");
+
 			} catch (Exception e) {
-				labelstart.setText("La huella no fue capturada");			
+				labelstart.setText("La huella no fue capturada");
 			}
-		}		
+		}
 	}
 
 	private void StopCaptureThread(){
@@ -108,7 +109,7 @@ public class Capture extends JPanel implements ActionListener
 
 
 	public void actionPerformed(ActionEvent e){
-		log.info("estoy dentro de actionperfomad de capture");
+		log.trace("Etnra a actionPerformed...");
 		 if(e.getActionCommand().equals(CaptureThread.ACT_CAPTURE)){
 			//event from capture thread
 			CaptureThread.CaptureEvent evt = (CaptureThread.CaptureEvent)e;
@@ -124,7 +125,7 @@ public class Capture extends JPanel implements ActionListener
 					//display image
 					
 					m_image.showImage(evt.capture_result.image);
-					log.info("imagen capturada.....");
+					log.debug("imagen capturada.....");
 					
 					captura = evt.capture_result;
 					
@@ -133,36 +134,33 @@ public class Capture extends JPanel implements ActionListener
 				else if(Reader.CaptureQuality.CANCELED == evt.capture_result.quality){
 					//capture or streaming was canceled, just quit
 					bCanceled = true;
-					log.info("cancelado {}",bCanceled);
+					log.debug("cancelado {}",bCanceled);
 				}
 				else{
 					//bad quality
-					log.info(evt.capture_result.quality);
+					log.debug(evt.capture_result.quality);
 				}
 			}
 			else if(null != evt.exception){
 				//exception during capture
-				log.info("Capture",  evt.exception);
+				log.error("Capture",  evt.exception);
 				bCanceled = true;
 			}
 			else if(null != evt.reader_status){
-				log.info(evt.reader_status);
+				log.debug(evt.reader_status);
 				bCanceled = true;
 			}
-
-			
-			
 		}
-		
 	}
 
 
 	private void doModal(JDialog dlgParent){
 		//open reader
-		try{
+		try {
 			m_reader.Open(Reader.Priority.COOPERATIVE);
+		} catch (UareUException e) {
+			log.info("Reader.Open()", e);
 		}
-		catch(UareUException e){ log.info("Reader.Open()", e); }
 		
 		boolean bOk = true;
 		if(m_bStreaming){
