@@ -24,9 +24,10 @@ import com.google.gson.Gson;
 import com.hoth.fingerprint.gui.Capture;
 import com.hoth.fingerprint.gui.Enrollment;
 import com.hoth.fingerprint.gui.Verification;
-import com.hoth.fingerprint.model.request.JsonRespuesta;
+import com.hoth.fingerprint.model.request.ChallengeResponse;
 import com.hoth.fingerprint.model.request.Peticion;
 import com.hoth.fingerprint.model.response.BiometricResponse;
+import com.hoth.fingerprint.tools.FingerPrintException;
 
 @RestController
 @RequestMapping("/finger")
@@ -38,7 +39,8 @@ public class FingerprintController {
 	public ResponseEntity<BiometricResponse> validateFingerPrint(@RequestBody Peticion json) {
 		ResponseEntity<BiometricResponse> response = null;
 		String accion = null;		
-		BiometricResponse biometric = null;				
+		BiometricResponse biometric = null;
+		ChallengeResponse jsonChallengeResponse = null;
 
 		// ----- Biometricos ----- 
 		Reader.CaptureResult captura= null;
@@ -76,7 +78,7 @@ public class FingerprintController {
 
 				case "Capture":
 				
-				log.info("Capturando biometrico...");
+					log.info("Capturando biometrico...");
 					Capture.Run();					
 					captura = Capture.getCaptura();
 					
@@ -107,7 +109,7 @@ public class FingerprintController {
 					Fmd[] fmd_s = new Fmd[3];
 					Fmd capturaFmd = null;
 					//Fmd enrolamientoFmd = null;
-					JsonRespuesta jsonValidate = null;
+					
 					String validateHuella = null;
 					String validateHuella2 = null;
 					boolean match;
@@ -115,20 +117,28 @@ public class FingerprintController {
 					Fmd huella2 = null;
 					String numeroEmpleado = json.getNumeroEmpleado();
 					
-					jsonValidate = connectionChallengeServlet(numeroEmpleado);
+					jsonChallengeResponse = connectionChallengeServlet(numeroEmpleado);
+					if(jsonChallengeResponse == null) {
+						throw new FingerPrintException("No hay respuesta del sistema.");
+					}
 
+					log.debug("Respuesta del challenge servlet: {}", jsonChallengeResponse);
+					Integer codigoError = jsonChallengeResponse.getCodigoError();
 
-					//log.info("Datos de json servlet {}", jsonValidate.getToken() );
-
+					if(codigoError != null && codigoError != 0) {
+						log.info("Error del challenge servlet: {}", jsonChallengeResponse.getMensajeError());
+						throw new FingerPrintException(jsonChallengeResponse.getMensajeError());
+					}
+					
 					log.info("Validando biometricos...");
 					log.debug("json captura: {}", json.getCaptura());
 					
 					capturaFmd = decodificar(json.getCaptura());
 					log.debug("capturaFmd: {}",capturaFmd);					
 					
-					validateHuella = jsonValidate.getHuella();
+					validateHuella = jsonChallengeResponse.getHuella();
 					log.trace("validateHuella {}",validateHuella);
-					validateHuella2 = jsonValidate.getHuella2();
+					validateHuella2 = jsonChallengeResponse.getHuella2();
 					log.trace("validateHuella2 {}",validateHuella2);
 					huella = decodificar(validateHuella);
 					log.trace("huella {}",huella);
@@ -152,7 +162,7 @@ public class FingerprintController {
 					biometric.setVerifyBiometricData(match);
 					
 					if(match == true){
-						biometric.setToken(jsonValidate.getToken());
+						biometric.setToken(jsonChallengeResponse.getToken());
 					}else{
 						biometric.setToken(null);
 					}	
@@ -169,6 +179,11 @@ public class FingerprintController {
 			
 		} catch(Exception ex) {
 			log.error("Problema para obtener el biometrico...", ex);
+			biometric = new BiometricResponse();
+			biometric.setLastCodeError(1);
+			biometric.setLastMessageError(ex.getMessage());
+			
+			response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
 		} 
 
 		return response;
@@ -202,12 +217,12 @@ public class FingerprintController {
 		return fmd;
 	}
 
-	public JsonRespuesta connectionChallengeServlet(String numeroEmp){
+	public ChallengeResponse connectionChallengeServlet(String numeroEmp){
 
 		URL url = null;    
 		HttpURLConnection con = null;
 		String json = null;
-		JsonRespuesta jsonR = null;
+		ChallengeResponse jsonR = null;
 
 		//CARGAR PROPIEDADES DE APPPLICATION.PROPERTIES
 		Properties properties = null;
@@ -241,7 +256,8 @@ public class FingerprintController {
 				
 				StringBuilder sb = new StringBuilder();  
 				int HttpResult = con.getResponseCode(); 
-				log.trace("Http..." + HttpResult);
+				log.trace("HTTP Code de Challenge: {}", HttpResult);
+				log.debug("Objeto conexion URL: {}", con);
 
 				if (HttpResult == HttpURLConnection.HTTP_CREATED) {
 					BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream(), "utf-8"));
@@ -251,10 +267,20 @@ public class FingerprintController {
 					}
 					br.close();
 					json = sb.toString();
-					jsonR = new Gson().fromJson(json, JsonRespuesta.class);
+					jsonR = new Gson().fromJson(json, ChallengeResponse.class);
 					log.debug("JSON Respuesta: {}", sb.toString());  
 				} else {
-					log.info("Respuesta no satisfactoria: {}", con.getResponseMessage());  
+					log.warn("Respuesta no satisfactoria: {}", con.getResponseMessage());
+
+					BufferedReader br = new BufferedReader(new InputStreamReader(con.getErrorStream(), "utf-8"));
+					String line = null;  
+					while ((line = br.readLine()) != null) {  
+						sb.append(line + "\n");  
+					}
+					br.close();
+					json = sb.toString();
+					jsonR = new Gson().fromJson(json, ChallengeResponse.class);
+					log.info("JSON Respuesta: {}", sb.toString());
 				}  
 
 

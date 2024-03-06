@@ -4,6 +4,8 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -31,6 +33,9 @@ public class Capture extends JPanel implements ActionListener
 	private Reader        m_reader;
 	private ImagePanel    m_image;
 	private boolean       m_bStreaming = false;
+	private JLabel        label;
+	private JLabel        focusLabel;
+
 	public static Reader.CaptureResult captura;
 	
 	
@@ -63,21 +68,27 @@ public class Capture extends JPanel implements ActionListener
 		BoxLayout layout = new BoxLayout(this, BoxLayout.Y_AXIS);
 		setLayout(layout);
 
+		focusLabel = new JLabel();	
+		focusLabel.setName("focusLabel");	
+		focusLabel.setSize(200, 200);		
+		focusLabel.setIcon(new ImageIcon(getClass().getResource("/images/information.png")));
+		focusLabel.setText("Toque esta ventana para continuar.");
+		focusLabel.setFont(new Font("Tahoma", Font.BOLD, 18));
+		add(focusLabel);
+
 		m_image = new ImagePanel();
 		Dimension dm = new Dimension(400, 500);
 		m_image.setPreferredSize(dm);
 		add(m_image);
 		add(Box.createVerticalStrut(vgap));
-		JLabel label = new JLabel();	
-		
+
+		label = new JLabel();	
 		label.setName("label1");	
 		label.setSize(200, 200);		
 		label.setIcon(new ImageIcon(getClass().getResource("/images/huella.gif")));
 		label.setText("Coloca tu huella en el lector");
 		label.setFont(new Font("Tahoma", Font.BOLD, 18));						
 		add(label);
-		
-		
 	}
 
 	private void StartCaptureThread(JDialog dlg) {
@@ -109,7 +120,7 @@ public class Capture extends JPanel implements ActionListener
 
 
 	public void actionPerformed(ActionEvent e){
-		log.trace("Etnra a actionPerformed...");
+		log.trace("Entra a actionPerformed...");
 		 if(e.getActionCommand().equals(CaptureThread.ACT_CAPTURE)){
 			//event from capture thread
 			CaptureThread.CaptureEvent evt = (CaptureThread.CaptureEvent)e;
@@ -201,12 +212,34 @@ public class Capture extends JPanel implements ActionListener
 		}
 
 	}
+
+	public void addFocusLabel() {
+		add(focusLabel);
+		revalidate();
+	}
+
+	public void removeFocusLabel() {
+		remove(focusLabel);
+		revalidate();
+	}
 	
 	public static void Run(){
     	JDialog dlg = new JDialog((JDialog)null, "Lectura de huella", true);
     	Capture capture = new Capture();
+
+		dlg.addWindowFocusListener(new WindowFocusListener() {
+			@Override
+			public void windowLostFocus(WindowEvent e) {
+				capture.addFocusLabel();
+			}
+
+			public void windowGainedFocus(WindowEvent e) {
+				capture.removeFocusLabel();
+			}
+		});
+
     	capture.doModal(dlg);
 	}
 
-
+	
 }
