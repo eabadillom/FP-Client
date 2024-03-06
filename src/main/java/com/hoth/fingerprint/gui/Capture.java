@@ -225,6 +225,8 @@ public class Capture extends JPanel implements ActionListener
 	
 	public static void Run(){
     	JDialog dlg = new JDialog((JDialog)null, "Lectura de huella", true);
+		ImageIcon icon = new ImageIcon(Capture.class.getResource("/images/FP-Client.png"));
+		dlg.setIconImage(icon.getImage());
     	Capture capture = new Capture();
 
 		dlg.addWindowFocusListener(new WindowFocusListener() {
