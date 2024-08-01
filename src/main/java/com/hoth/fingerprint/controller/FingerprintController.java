@@ -27,7 +27,11 @@ import com.hoth.fingerprint.gui.Verification;
 import com.hoth.fingerprint.model.request.ChallengeResponse;
 import com.hoth.fingerprint.model.request.Peticion;
 import com.hoth.fingerprint.model.response.BiometricResponse;
+import com.hoth.fingerprint.tools.FPClientOperationException;
+import com.hoth.fingerprint.tools.FPComunicationException;
 import com.hoth.fingerprint.tools.FingerPrintException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 @RestController
 @RequestMapping("/finger")
@@ -103,7 +107,14 @@ public class FingerprintController {
 					break;
 					
 				case "Validate":
-				
+                                    
+                                        String numeroEmpleado = json.getNumeroEmpleado();
+
+                                        if(numeroEmpleado == null || numeroEmpleado.equals(""))
+                                        {
+                                            throw new FPClientOperationException("Debe indicar un numero de empleado");
+                                        }
+                                    				
 					log.debug("Iniciando validacion...");
 					//arreglo de biometricos
 					Fmd[] fmd_s = new Fmd[3];
@@ -115,20 +126,20 @@ public class FingerprintController {
 					boolean match;
 					Fmd huella = null;
 					Fmd huella2 = null;
-					String numeroEmpleado = json.getNumeroEmpleado();
-					
+										
 					jsonChallengeResponse = connectionChallengeServlet(numeroEmpleado);
-					if(jsonChallengeResponse == null) {
+					/*if(jsonChallengeResponse == null) {
 						throw new FingerPrintException("No hay respuesta del sistema.");
-					}
+					}*/
 
 					log.debug("Respuesta del challenge servlet: {}", jsonChallengeResponse);
 					Integer codigoError = jsonChallengeResponse.getCodigoError();
 
-					if(codigoError != null && codigoError != 0) {
+					/*if(codigoError != null && codigoError != 0) {
+                                                System.out.println("Entre");
 						log.info("Error del challenge servlet: {}", jsonChallengeResponse.getMensajeError());
 						throw new FingerPrintException(jsonChallengeResponse.getMensajeError());
-					}
+					}*/
 					
 					log.info("Validando biometricos...");
 					log.debug("json captura: {}", json.getCaptura());
@@ -177,11 +188,28 @@ public class FingerprintController {
 					break;
 			}
 			
-		} catch(Exception ex) {
+		}catch(FPComunicationException ex){
+                    log.error("Error en la conexión...", ex.getMessage());
+                    
+                    biometric = new BiometricResponse();
+                    biometric.setLastCodeError(1);
+                    biometric.setLastMessageError(ex.getMessage());
+
+                    response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
+                }catch(FPClientOperationException e){
+                    log.error("Error en la obtencion de los datos del usuario...", e.getMessage());
+                    
+                    biometric = new BiometricResponse();
+                    biometric.setLastCodeError(1);
+                    biometric.setLastMessageError(e.getMessage());
+
+                    response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
+                }catch(Exception ex) {
 			log.error("Problema para obtener el biometrico...", ex);
 			biometric = new BiometricResponse();
 			biometric.setLastCodeError(1);
-			biometric.setLastMessageError(ex.getMessage());
+			biometric.setLastMessageError("Ocurrio un problema con el lector de huella, por favor avisa a tu "
+                                + "administrador de sistemas");
 			
 			response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
 		} 
@@ -217,7 +245,7 @@ public class FingerprintController {
 		return fmd;
 	}
 
-	public ChallengeResponse connectionChallengeServlet(String numeroEmp){
+	public ChallengeResponse connectionChallengeServlet(String numeroEmp) throws FPComunicationException{
 
 		URL url = null;    
 		HttpURLConnection con = null;
@@ -230,6 +258,7 @@ public class FingerprintController {
 		String urlSGP = null;
 		String idFpClient = null;
 		String password = null;
+                Integer timeout = null;
 
 			try {
 
@@ -240,6 +269,7 @@ public class FingerprintController {
 				urlSGP = properties.getProperty("sgp.url");
 				idFpClient = properties.getProperty("idFpClient");
 				password = properties.getProperty("password");
+                                timeout = Integer.parseInt(properties.getProperty("sgp.timeout"));
 
 				log.debug("ESTE ES EL NUMERO DE EMPLEADO {}", numeroEmp);
 
@@ -251,7 +281,8 @@ public class FingerprintController {
 				con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");                 
 				con.setRequestProperty("Accept", "application/json");
 				con.setRequestProperty("dataType","json" );				
-				con.setDoInput(true);
+				con.setReadTimeout(timeout * 1000);
+                                con.setDoInput(true);
 				con.setDoOutput(true);
 				
 				StringBuilder sb = new StringBuilder();  
@@ -284,8 +315,12 @@ public class FingerprintController {
 				}  
 
 
-		}catch(Exception e){
-			log.error("Problema al realizar la validación del usuario...", e);
+		}catch(SocketTimeoutException | SocketException ex){
+                    log.error("Problema al realizar la conexión...", ex.getMessage());
+                    throw new FPComunicationException("Hay un problema en la comunicación, se tomara registro de tu asistencia"
+                            + " y despues se registrara en el sistema...");
+                }catch(Exception e){
+                    log.error("Problema al realizar la validación del usuario...", e);
 		}
 
 		return jsonR;
