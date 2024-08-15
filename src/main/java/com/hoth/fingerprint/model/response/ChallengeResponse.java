@@ -1,4 +1,4 @@
-package com.hoth.fingerprint.model.request;
+package com.hoth.fingerprint.model.response;
 
 public class ChallengeResponse {
 

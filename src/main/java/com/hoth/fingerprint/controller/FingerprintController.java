@@ -3,7 +3,6 @@ package com.hoth.fingerprint.controller;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Base64;
@@ -21,27 +20,33 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.digitalpersona.uareu.*;
 import com.google.gson.Gson;
+import com.hoth.fingerprint.business.RegistroLocalBL;
+import static com.hoth.fingerprint.dao.DAO.close;
 import com.hoth.fingerprint.gui.Capture;
 import com.hoth.fingerprint.gui.Enrollment;
-import com.hoth.fingerprint.gui.Verification;
-import com.hoth.fingerprint.model.request.ChallengeResponse;
+import com.hoth.fingerprint.model.response.ChallengeResponse;
 import com.hoth.fingerprint.model.request.Peticion;
 import com.hoth.fingerprint.model.response.BiometricResponse;
-import com.hoth.fingerprint.tools.FPClientOperationException;
-import com.hoth.fingerprint.tools.FPComunicationException;
-import com.hoth.fingerprint.tools.FingerPrintException;
+import com.hoth.fingerprint.exceptions.FPClientOperationException;
+import com.hoth.fingerprint.exceptions.FPClientComunicationException;
+import com.hoth.fingerprint.exceptions.FingerPrintException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.sql.Connection;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/finger")
 public class FingerprintController {
-	private static Logger log = LogManager.getLogger(FingerprintController.class);	
+	private static Logger log = LogManager.getLogger(FingerprintController.class);
+        private RegistroLocalBL registros;
 	
 	@CrossOrigin("*")
 	@PostMapping
-	public ResponseEntity<BiometricResponse> validateFingerPrint(@RequestBody Peticion json) {
-		ResponseEntity<BiometricResponse> response = null;
+	public ResponseEntity<BiometricResponse> validateFingerPrint(@RequestBody Peticion json) throws Exception {
+                this.registros = new RegistroLocalBL();
+                ResponseEntity<BiometricResponse> response = null;
 		String accion = null;		
 		BiometricResponse biometric = null;
 		ChallengeResponse jsonChallengeResponse = null;
@@ -107,63 +112,43 @@ public class FingerprintController {
 					break;
 					
 				case "Validate":
-                                    
+                                        
                                         String numeroEmpleado = json.getNumeroEmpleado();
-
+                                        
                                         if(numeroEmpleado == null || numeroEmpleado.equals(""))
                                         {
                                             throw new FPClientOperationException("Debe indicar un numero de empleado");
                                         }
-                                    				
-					log.debug("Iniciando validacion...");
-					//arreglo de biometricos
-					Fmd[] fmd_s = new Fmd[3];
-					Fmd capturaFmd = null;
-					//Fmd enrolamientoFmd = null;
-					
-					String validateHuella = null;
-					String validateHuella2 = null;
-					boolean match;
-					Fmd huella = null;
-					Fmd huella2 = null;
-										
-					jsonChallengeResponse = connectionChallengeServlet(numeroEmpleado);
-					/*if(jsonChallengeResponse == null) {
-						throw new FingerPrintException("No hay respuesta del sistema.");
-					}*/
-
-					log.debug("Respuesta del challenge servlet: {}", jsonChallengeResponse);
-					Integer codigoError = jsonChallengeResponse.getCodigoError();
-
-					/*if(codigoError != null && codigoError != 0) {
-                                                System.out.println("Entre");
-						log.info("Error del challenge servlet: {}", jsonChallengeResponse.getMensajeError());
-						throw new FingerPrintException(jsonChallengeResponse.getMensajeError());
-					}*/
-					
-					log.info("Validando biometricos...");
-					log.debug("json captura: {}", json.getCaptura());
-					
-					capturaFmd = decodificar(json.getCaptura());
-					log.debug("capturaFmd: {}",capturaFmd);					
-					
-					validateHuella = jsonChallengeResponse.getHuella();
-					log.trace("validateHuella {}",validateHuella);
-					validateHuella2 = jsonChallengeResponse.getHuella2();
-					log.trace("validateHuella2 {}",validateHuella2);
-					huella = decodificar(validateHuella);
-					log.trace("huella {}",huella);
-					huella2 = decodificar(validateHuella2);
-					log.trace("huella2 {}",huella2);
-					
-					fmd_s[0] = capturaFmd;
-					fmd_s[1] = huella;
-					fmd_s[2] = huella2;
-					
-					Verification.Run(fmd_s);
-					match = Verification.isFinger_M();
-
-					log.trace("Valor de match .............. . . .: {}",match);
+                                        
+                                        jsonChallengeResponse = connectionChallengeServlet(numeroEmpleado);
+                                        
+                                        String validateHuella = jsonChallengeResponse.getHuella();
+                                        log.trace("validateHuella {}", validateHuella);
+					String validateHuella2 = jsonChallengeResponse.getHuella2();
+                                        log.trace("validateHuella2 {}", validateHuella2);
+                                        String huellaCapturada = json.getCaptura();
+                                        log.trace("huellaCapturada {}", huellaCapturada);
+                                        
+                                        boolean match;
+                                        
+                                        log.debug("Respuesta del challenge servlet: {}", jsonChallengeResponse);
+                                        Integer codigoError = jsonChallengeResponse.getCodigoError();
+                                    	
+                                        //match = registros.comprobarHuella(jsonChallengeResponse.getHuella(), jsonChallengeResponse.getHuella2(), json.getCaptura()); 
+					match = registros.comprobarHuella(validateHuella, validateHuella2, huellaCapturada);
+                                        
+                                        Connection conn = null;
+                                        boolean registroEmpleadoCompletado = registros.registrarEmpleado(conn, numeroEmpleado, jsonChallengeResponse.getHuella(), jsonChallengeResponse.getHuella2());
+                                        if(registroEmpleadoCompletado == true)
+                                        {
+                                            log.info("Empleado registrado exitosamente!!!");
+                                        }else
+                                        {
+                                            log.info("El empleado no se registro!!!");
+                                        }
+                                        close(conn);
+                                        
+                                        log.trace("Valor de match .............. . . .: {}",match);
 
 					biometric = new BiometricResponse();
 					biometric.setName("Validar");
@@ -174,36 +159,36 @@ public class FingerprintController {
 					
 					if(match == true){
 						biometric.setToken(jsonChallengeResponse.getToken());
-					}else{
+                                        }else{
 						biometric.setToken(null);
 					}	
 					response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
-
+                                        
+                                        
 					break;
-
 					default:
-
 						log.info("ocurrio un error switch .......");
-
 					break;
 			}
 			
-		}catch(FPComunicationException ex){
+		}catch(FPClientComunicationException | FPClientOperationException ex){
                     log.error("Error en la conexión...", ex.getMessage());
-                    
-                    biometric = new BiometricResponse();
-                    biometric.setLastCodeError(1);
-                    biometric.setLastMessageError(ex.getMessage());
+                    log.error("Guardando empleado en base local...");
+                    Connection conn = null;
+                    try 
+                    {
+                        registros.registrarAsistencia(conn, json.getNumeroEmpleado(), json.getCaptura());
+                        close(conn);
+                        biometric = new BiometricResponse();
+                        biometric.setLastCodeError(1);
+                        biometric.setLastMessageError(ex.getMessage());
 
-                    response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
-                }catch(FPClientOperationException e){
-                    log.error("Error en la obtencion de los datos del usuario...", e.getMessage());
-                    
-                    biometric = new BiometricResponse();
-                    biometric.setLastCodeError(1);
-                    biometric.setLastMessageError(e.getMessage());
-
-                    response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
+                        response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
+                    } catch (FingerPrintException ex1) 
+                    {
+                        log.info("Problema encontrado en la asistencia!!!", ex1.getMessage());
+                        throw new Exception("Hubo algun problema con la base de datos");
+                    }
                 }catch(Exception ex) {
 			log.error("Problema para obtener el biometrico...", ex);
 			biometric = new BiometricResponse();
@@ -216,36 +201,29 @@ public class FingerprintController {
 
 		return response;
 	}
-	
-	public Fmd decodificar(String huella){
-		
-		Fmd fmd = null;
-		byte[] byteHuella = null;
-		log.debug("entre al metodo decodificador");
-		
-		//Creamos el fmd en base a los bytes del string
-		
-		try {
-			log.debug("descodificare {}", huella);
-			byteHuella = Base64.getDecoder().decode(new String(huella).getBytes("UTF-8"));
-			log.debug("descodificada la huellla");
-			log.debug("byeHuella: {}", byteHuella);
-			fmd = UareUGlobal.GetImporter().ImportFmd(byteHuella, Fmd.Format.ANSI_378_2004, Fmd.Format.ANSI_378_2004);
-
-		} catch (UareUException e) {			
-			log.error("error al convertir en fmd", e);
-		} catch (UnsupportedEncodingException e) {
-			log.error("Error al convertir en base 64", e);
-		}
-		
-
-		log.debug("converti los bytes de huella a fmd ");
-		log.debug("Fmd convertido {}", fmd);				
-		
-		return fmd;
-	}
-
-	public ChallengeResponse connectionChallengeServlet(String numeroEmp) throws FPComunicationException{
+        
+        @CrossOrigin("*")
+        @DeleteMapping
+        public ResponseEntity<BiometricResponse> eliminarEmpleado(@RequestBody Peticion json) {
+            ResponseEntity<BiometricResponse> respuesta = null;
+            
+            log.info("Entrando al metodo DELETE del Controller... {}", json.getNumeroEmpleado());
+            
+            return respuesta;
+        }
+        
+        
+        @CrossOrigin("*")
+        @GetMapping(path = "/buscar")
+        public ResponseEntity<BiometricResponse> buscarPorNumeroEmpleado(@RequestBody Peticion json) {
+            ResponseEntity<BiometricResponse> respuesta = null;
+            
+            log.info("Entrando al metodo GET....{}", json.getNumeroEmpleado());
+            
+            return respuesta;
+        }
+        
+	public ChallengeResponse connectionChallengeServlet(String numeroEmp) throws FPClientComunicationException{
 
 		URL url = null;    
 		HttpURLConnection con = null;
@@ -317,7 +295,7 @@ public class FingerprintController {
 
 		}catch(SocketTimeoutException | SocketException ex){
                     log.error("Problema al realizar la conexión...", ex.getMessage());
-                    throw new FPComunicationException("Hay un problema en la comunicación, se tomara registro de tu asistencia"
+                    throw new FPClientComunicationException("Hay un problema en la comunicación, se tomara registro de tu asistencia"
                             + " y despues se registrara en el sistema...");
                 }catch(Exception e){
                     log.error("Problema al realizar la validación del usuario...", e);
@@ -325,5 +303,5 @@ public class FingerprintController {
 
 		return jsonR;
 	}
-	
+        
 }
