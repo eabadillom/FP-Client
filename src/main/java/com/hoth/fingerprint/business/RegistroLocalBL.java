@@ -11,6 +11,7 @@ import com.digitalpersona.uareu.Fmd;
 import com.digitalpersona.uareu.UareUException;
 import com.digitalpersona.uareu.UareUGlobal;
 import com.hoth.fingerprint.dao.AsistenciaDAO;
+import static com.hoth.fingerprint.dao.DAO.close;
 import com.hoth.fingerprint.dao.EmpleadoDAO;
 import com.hoth.fingerprint.exceptions.FingerPrintException;
 import com.hoth.fingerprint.gui.Verification;
@@ -25,6 +26,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.UUID;
 
 /**
  *
@@ -108,6 +110,7 @@ public class RegistroLocalBL
         {
             conn = Conexion.dsConexion();
             this.empDAO.crearTabla(conn);
+            
             Empleado emp = empDAO.obtenerDato(conn, numeroEmpleado);
 
             if(emp == null)
@@ -116,7 +119,6 @@ public class RegistroLocalBL
                 emp.setNumeroEmpleado(numeroEmpleado);
                 emp.setB1(huella1);
                 emp.setB2(huella2);
-                this.empDAO.guardarElemento(conn, emp);
                 resultado = true;
             }
 
@@ -129,13 +131,18 @@ public class RegistroLocalBL
         return resultado;
     } 
 
-    public void registrarAsistencia(Connection conn, String numeroEmpleado, String captura) throws FingerPrintException
+    public void registrarAsistencia(String numeroEmpleado, String captura) throws FingerPrintException
     {
+        Connection conn = null;
         log.info("Entrado al metodo de registrar asistencia");
+        UUID uuidAux;
         Date fecha = null;
         Calendar cal = null;
         cal = Calendar.getInstance(TimeZone.getTimeZone("GMT-6:00"), new Locale("es", "MX"));
         fecha = cal.getTime();
+        //log.info("Fecha: " + fecha.toString());
+        Date fechaNueva = fechaUtils.LocalDate(fecha);
+        //log.info("Fecha convertida: "+fechaNueva.toString());
         try
         {
             conn = Conexion.dsConexion();
@@ -150,14 +157,24 @@ public class RegistroLocalBL
                     boolean exitoso = comprobarHuella(emp.getB1(), emp.getB2(), captura);
                     if(exitoso == true)
                     {
-                        Asistencia asistenciaVer = asistenciaDAO.obtenerDato(conn, emp.getNumeroEmpleado());
+                        Asistencia asistenciaVer = asistenciaDAO.obtenerDatoActual(conn, emp.getNumeroEmpleado(), fechaNueva);
                         if(asistenciaVer != null)
                         {
-                            asistenciaActualizarElemento(conn, emp, fecha, null);
+                            uuidAux = asistenciaVer.getIdAsistencia();
+                            asistenciaActualizarElemento(conn, emp, fecha, null, uuidAux);
+                            
                         }else
                         {
                             asistenciaGuardarElemento(conn, emp, fecha, null);
                         }
+                        /*if(asistenciaVer != null)
+                        {
+                            uuidAux = asistenciaVer.getIdAsistencia();
+                            asistenciaActualizarElemento(conn, emp, fecha, null, uuidAux);
+                        }else
+                        {
+                            asistenciaGuardarElemento(conn, emp, fecha, null);
+                        }*/
                     }else
                     {
                         log.error("Comparacion no exitosa");
@@ -168,7 +185,8 @@ public class RegistroLocalBL
                     Asistencia asistenciaVer = asistenciaDAO.obtenerDato(conn, emp.getNumeroEmpleado());
                     if(asistenciaVer != null)
                     {
-                        asistenciaActualizarElemento(conn, emp, fecha, captura);
+                        uuidAux = asistenciaVer.getIdAsistencia();
+                        asistenciaActualizarElemento(conn, emp, fecha, captura, uuidAux);
                     }else
                     {
                         asistenciaGuardarElemento(conn, emp, fecha, captura);
@@ -188,6 +206,9 @@ public class RegistroLocalBL
         {
             log.error("Hubo un problema al registrar la asistencia ", ex.getMessage());
             throw new FingerPrintException("Problema al guardar la asistencia");
+        }finally
+        {
+            close(conn);
         }
 
     }
@@ -198,7 +219,7 @@ public class RegistroLocalBL
         {
             Asistencia asistencia = new Asistencia();
             asistencia.setNumeroEmpleado(emp.getNumeroEmpleado());
-            asistencia.setFechaEntrada(fechaUtils.DateToTimestamp(fecha));
+            asistencia.setFechaEntrada(fecha);
             asistencia.setFechaSalida(null);
             asistencia.setB1(captura);
             this.asistenciaDAO.guardarElemento(conn, asistencia);
@@ -209,16 +230,17 @@ public class RegistroLocalBL
         }
     }
     
-    public void asistenciaActualizarElemento(Connection conn, Empleado emp, Date fecha, String captura) throws FingerPrintException
+    public void asistenciaActualizarElemento(Connection conn, Empleado emp, Date fecha, String captura, UUID uuid) throws FingerPrintException
     {
         try
         {
             Asistencia asistencia = new Asistencia();
+            asistencia.setIdAsistencia(uuid);
             asistencia.setNumeroEmpleado(emp.getNumeroEmpleado());
             asistencia.setFechaEntrada(null);
-            asistencia.setFechaSalida(fechaUtils.DateToTimestamp(fecha));
+            asistencia.setFechaSalida(fecha);
             asistencia.setB1(captura);
-            this.asistenciaDAO.actualizarElemento(conn, asistencia, emp.getNumeroEmpleado());
+            this.asistenciaDAO.actualizarElemento(conn, asistencia);
         }catch(Exception ex)
         {
             log.error("Hubo un problema al registrar la asistencia ", ex.getMessage());

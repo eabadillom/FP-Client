@@ -139,7 +139,7 @@ public class FingerprintController {
                                         
                                         Connection conn = null;
                                         boolean registroEmpleadoCompletado = registros.registrarEmpleado(conn, numeroEmpleado, jsonChallengeResponse.getHuella(), jsonChallengeResponse.getHuella2());
-                                        if(registroEmpleadoCompletado == true)
+                                        if(registroEmpleadoCompletado != true)
                                         {
                                             log.info("Empleado registrado exitosamente!!!");
                                         }else
@@ -174,11 +174,11 @@ public class FingerprintController {
 		}catch(FPClientComunicationException | FPClientOperationException ex){
                     log.error("Error en la conexión...", ex.getMessage());
                     log.error("Guardando empleado en base local...");
-                    Connection conn = null;
+                    
                     try 
                     {
-                        registros.registrarAsistencia(conn, json.getNumeroEmpleado(), json.getCaptura());
-                        close(conn);
+                        registros.registrarAsistencia(json.getNumeroEmpleado(), json.getCaptura());
+                        
                         biometric = new BiometricResponse();
                         biometric.setLastCodeError(1);
                         biometric.setLastMessageError(ex.getMessage());

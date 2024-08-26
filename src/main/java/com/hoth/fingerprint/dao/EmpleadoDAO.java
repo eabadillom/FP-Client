@@ -8,7 +8,6 @@ import com.hoth.fingerprint.exceptions.FingerPrintException;
 import com.hoth.fingerprint.model.domain.Empleado;
 import com.hoth.fingerprint.interfaces.DAOInterface;
 import java.util.List;
-import java.util.Optional;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -46,34 +45,60 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
     @Override
     public void crearTabla(Connection con) throws SQLException, ClassNotFoundException 
     {
+        boolean estado = false;
         int creacionTabla = 0;
         String createTableSQL = "CREATE TABLE IF NOT EXISTS datos_b("
                 + "numero_empleado varchar(10) primary key,"
                 + "b1 text null,"
                 + "b2 text null"
                 + ")";
-        Statement ps = null;
+        PreparedStatement ps = null;
         try
         {
-            ps = con.createStatement();
-            ps.execute(createTableSQL);
-             
-            log.info("Tabla creada exitosamente!!!");
-            /*if(creacionTabla != 0){
-                
-            }else{
+            ps = con.prepareStatement(createTableSQL);
+            creacionTabla = ps.executeUpdate();
+            
+            if(creacionTabla != 0)
+            {
+                log.info("Tabla creada exitosamente!!!");
+            }else
+            {
                 log.info("Tabla ya creada");
-            }*/
+            }
         }finally
         {
             close(ps);
         }
-        
     }
 
     @Override
-    public void borrarTabla(Connection con) throws SQLException, ClassNotFoundException {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    public void borrarTabla(Connection con) throws SQLException, FingerPrintException 
+    {
+        int creacionTabla = 0;
+        String borrarTableSQL = "truncate table datos_b";
+        PreparedStatement ps = null;
+        try
+        {
+            ps = con.prepareStatement(borrarTableSQL);
+            creacionTabla = ps.executeUpdate();
+            
+            if(ps == null)
+            {
+                throw new FingerPrintException("Ocurrio algo con la base de datos");
+            }
+            
+            if(creacionTabla != 0)
+            {
+                log.info("Contenido de la tabla borrada exitosamente!!!");
+            }else
+            {
+                log.info("Tabla ya limpia");
+            }
+        }finally
+        {
+            log.info("Cerrando Conexion");
+            close(ps);
+        }
     }
 
     @Override
@@ -99,8 +124,9 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             ps.setString(1, id);
             rs = ps.executeQuery();
             
-            if(rs == null)
+            if(rs == null){
                 throw new FingerPrintException("Ocurrio algo con la base de datos");
+            }
             
             if(rs.next())
             {
@@ -116,7 +142,7 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
     }
 
     @Override
-    public List<Empleado> obtenerTodosElementos(Connection con) throws SQLException, ClassNotFoundException {
+    public List<Empleado> obtenerTodosElementos(Connection con) throws SQLException, FingerPrintException {
         List<Empleado> listaModel = null;
         Empleado model = null;
         PreparedStatement ps = null;
@@ -129,6 +155,10 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             ps = con.prepareStatement(buscarTodos);
             rs = ps.executeQuery();
             listaModel = new ArrayList<Empleado>();
+            
+            if(rs == null){
+                throw new FingerPrintException("Ocurrio algo con la base de datos");
+            }
             
             while(rs.next())
             {
@@ -144,6 +174,41 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
         }
         
         return listaModel;
+    }
+    
+    public Empleado obtenerEmpleadoSinHuella(Connection conn) throws SQLException, FingerPrintException
+    {
+        //Empleado> listaModel = null;
+        Empleado model = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        String buscarEmpleadoSinHuellas = null;
+        
+        try
+        {
+            buscarEmpleadoSinHuellas = SELECT + "where b1 is null or b2 is null";
+            ps = conn.prepareStatement(buscarEmpleadoSinHuellas);
+            rs = ps.executeQuery();
+            //listaModel = new ArrayList<Empleado>();
+            
+            if(rs == null){
+                throw new FingerPrintException("Ocurrio algo con la base de datos");
+            }
+            
+            if(rs.next())
+            {
+                model = getModel(rs);
+                //listaModel.add(model);
+            }
+            log.info("Se encontro empleadon sin alguna huella");
+        }
+        finally
+        {
+            close(ps);
+            close(rs);
+        }
+        
+        return model;
     }
 
     @Override
@@ -162,9 +227,9 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             
             guardarConsulta = INSERT;
             ps = conn.prepareStatement(guardarConsulta);
-            ps.setString(++indice, t.getNumeroEmpleado());
-            ps.setString(++indice, t.getB1());
-            ps.setString(++indice, t.getB2());
+            ps.setString(++indice, getTrim(t.getNumeroEmpleado()));
+            ps.setString(++indice, getTrim(t.getB1()));
+            ps.setString(++indice, getTrim(t.getB2()));
             resultUpdate = ps.executeUpdate();
             
             if(resultUpdate != 0){
@@ -177,32 +242,34 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
         {
             close(ps);
         }
-        
     }
 
     @Override
-    public void actualizarElemento(Connection con, Empleado t, String parametro) throws SQLException, FingerPrintException {
+    public void actualizarElemento(Connection con, Empleado t) throws SQLException, FingerPrintException 
+    {
         int resultUpdate = 0;
+        int incremento = 0;
         
         String actualizarConsulta = null;
         PreparedStatement ps = null;
         
         try
         {
-            if(t == null)
+            if(t == null){
                 throw new FingerPrintException("El cliente no debe de ser un objeto vacio o nulo");
-            
-            if(parametro == null)
+            }
+            if(t.getNumeroEmpleado() == null){
                 throw new FingerPrintException("El id del empleado no debe de ser incorrecto!!!");
-            
-            if(parametro.isEmpty())
+            }
+            if(t.getNumeroEmpleado().isEmpty()){
                 throw new FingerPrintException("El id del empleado no debe de ser un objeto vacio o nulo");
+            }
             
             actualizarConsulta = UPDATE + "where numero_empleado = ?";
             ps = con.prepareStatement(actualizarConsulta);
-            ps.setString(resultUpdate, t.getB1());
-            ps.setString(resultUpdate, t.getB2());
-            ps.setString(resultUpdate, parametro);
+            ps.setString(++incremento, t.getB1());
+            ps.setString(++incremento, t.getB2());
+            ps.setString(++incremento, t.getNumeroEmpleado());
             resultUpdate = ps.executeUpdate();
             
             if(resultUpdate != 0)

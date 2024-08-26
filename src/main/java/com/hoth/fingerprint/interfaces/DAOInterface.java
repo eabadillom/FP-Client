@@ -22,15 +22,15 @@ public interface DAOInterface <T>
     
     void crearTabla(Connection con) throws SQLException, ClassNotFoundException;
     
-    void borrarTabla(Connection con) throws SQLException, ClassNotFoundException;
+    void borrarTabla(Connection con) throws SQLException, FingerPrintException;
     
     T obtenerDato(Connection con, String id) throws SQLException, FingerPrintException;
     
-    List<T> obtenerTodosElementos(Connection con) throws SQLException, ClassNotFoundException;
+    List<T> obtenerTodosElementos(Connection con) throws SQLException, FingerPrintException;
     
     void guardarElemento(Connection con, T t) throws SQLException, FingerPrintException;
     
-    void actualizarElemento(Connection con, T t, String parametro) throws SQLException, FingerPrintException;
+    void actualizarElemento(Connection con, T t) throws SQLException, FingerPrintException;
     
     void borrarElemento(Connection con, T t) throws SQLException, FingerPrintException;
 }

@@ -13,6 +13,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 
 import org.apache.logging.log4j.LogManager;
@@ -124,6 +125,14 @@ public class DAO
         }
         return tmp;
     }
+    
+    public static synchronized Date getDate(java.sql.Timestamp value) {
+        Date tmp = null;
+        if (value != null) {
+            tmp = new Date(value.getTime());
+        }
+        return tmp;
+    }
 
     public static synchronized java.sql.Date getSqlDate(Date value) {
         java.sql.Date tmp = null;
@@ -150,6 +159,24 @@ public class DAO
 
         return tmp;
     }
+    
+    public static synchronized Timestamp getTimestamp(Date value) {
+        Timestamp tmp = null;
+        if (value != null) {
+            tmp = new Timestamp(value.getTime());
+        }
+
+        return tmp;
+    }
+    
+    /*public static synchronized Timestamp getTimestamp(LocalDate value) {
+        Timestamp tmp = null;
+        if (value != null) {
+            tmp = new Timestamp(value.);
+        }
+
+        return tmp;
+    }*/
 
     public static synchronized Integer getInteger(ResultSet rs, String column) throws SQLException {
         Integer result = null;

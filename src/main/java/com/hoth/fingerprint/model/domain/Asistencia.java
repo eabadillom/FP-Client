@@ -4,7 +4,7 @@
  */
 package com.hoth.fingerprint.model.domain;
 
-import java.sql.Timestamp;
+import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -15,9 +15,9 @@ public class Asistencia
 {
     private UUID idAsistencia;
     private String numeroEmpleado;
-    private Empleado datosEmpleado = new Empleado();
-    private Timestamp fechaEntrada;
-    private Timestamp fechaSalida;
+    //private Empleado datosEmpleado = new Empleado();
+    private Date fechaEntrada;
+    private Date fechaSalida;
     private String b1;
 
     public UUID getIdAsistencia() {
@@ -36,27 +36,27 @@ public class Asistencia
         this.numeroEmpleado = numeroEmpleado;
     }
     
-    public Empleado getDatosEmpleado() {
+    /*public Empleado getDatosEmpleado() {
         return datosEmpleado;
     }
 
     public void setDatosEmpleado(Empleado datosEmpleado) {
         this.datosEmpleado = datosEmpleado;
-    }
+    }*/
 
-    public Timestamp getFechaEntrada() {
+    public Date getFechaEntrada() {
         return fechaEntrada;
     }
 
-    public void setFechaEntrada(Timestamp fechaEntrada) {
+    public void setFechaEntrada(Date fechaEntrada) {
         this.fechaEntrada = fechaEntrada;
     }
 
-    public Timestamp getFechaSalida() {
+    public Date getFechaSalida() {
         return fechaSalida;
     }
 
-    public void setFechaSalida(Timestamp fechaSalida) {
+    public void setFechaSalida(Date fechaSalida) {
         this.fechaSalida = fechaSalida;
     }
 
