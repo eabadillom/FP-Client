@@ -5,8 +5,8 @@
 package com.hoth.fingerprint.model.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.Objects;
 import java.util.UUID;
@@ -19,9 +19,9 @@ public class SGPAsistenciaRequest
 {
     private UUID uuid;
     private String numero = null;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ss.SSSZ", timezone="UTC-6")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ssXXX", timezone="UTC-6")
     private OffsetDateTime horaEntrada = null;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ss.SSSZ", timezone="UTC-6")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ssXXX", timezone="UTC-6")
     private OffsetDateTime horaSalida = null;
 
     public UUID getUUId() {

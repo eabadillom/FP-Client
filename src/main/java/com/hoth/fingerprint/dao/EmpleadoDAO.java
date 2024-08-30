@@ -37,7 +37,6 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
         model.setNumeroEmpleado(getTrim(rs.getString("numero_empleado")));
         model.setB1(getTrim(rs.getString("b1")));
         model.setB2(getTrim(rs.getString("b2")));
-        log.info("Registrando los datos al modelo con exito!!!");
         
         return model;
     }
@@ -176,9 +175,9 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
         return listaModel;
     }
     
-    public Empleado obtenerEmpleadoSinHuella(Connection conn) throws SQLException, FingerPrintException
+    public List<Empleado> obtenerEmpleadoSinHuella(Connection conn) throws SQLException, FingerPrintException
     {
-        //Empleado> listaModel = null;
+        List<Empleado> listaModel = null;
         Empleado model = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -186,21 +185,21 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
         
         try
         {
-            buscarEmpleadoSinHuellas = SELECT + "where b1 is null or b2 is null";
+            buscarEmpleadoSinHuellas = SELECT + "where b1 is null and b2 is null";
             ps = conn.prepareStatement(buscarEmpleadoSinHuellas);
             rs = ps.executeQuery();
-            //listaModel = new ArrayList<Empleado>();
+            listaModel = new ArrayList<Empleado>();
             
             if(rs == null){
                 throw new FingerPrintException("Ocurrio algo con la base de datos");
             }
             
-            if(rs.next())
+            while(rs.next())
             {
                 model = getModel(rs);
-                //listaModel.add(model);
+                listaModel.add(model);
             }
-            log.info("Se encontro empleadon sin alguna huella");
+            log.info("Empleado obtenido satisfactoriamente");
         }
         finally
         {
@@ -208,7 +207,7 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             close(rs);
         }
         
-        return model;
+        return listaModel;
     }
 
     @Override
@@ -278,7 +277,6 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             }else
             {
                 log.error("No se actualizo el empleado");
-                throw new FingerPrintException("Hubo un problema en la base de datos.");
             }
         }finally
         {

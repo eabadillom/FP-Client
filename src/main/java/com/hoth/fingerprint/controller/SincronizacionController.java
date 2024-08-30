@@ -4,6 +4,7 @@
  */
 package com.hoth.fingerprint.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.hoth.fingerprint.business.SincronizaAsistenciaBL;
 import com.hoth.fingerprint.business.SincronizaEmpleadoBL;
 import com.hoth.fingerprint.dao.DAO;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -80,7 +82,7 @@ public class SincronizacionController extends DAO
     public ResponseEntity<List<Empleado>> sincronizarTodosEmpleados() 
     {
         ResponseEntity<List<Empleado>> response = null;
-        List<Empleado> empBuscado;
+        List<Empleado> empBuscado = null;
         Connection conn = null;
         try{
             conn = Conexion.dsConexion();
@@ -93,7 +95,7 @@ public class SincronizacionController extends DAO
         }
         catch(FingerPrintException ex)
         {
-            //response = new ResponseEntity<>(empBuscado, HttpStatus.FORBIDDEN);
+            response = new ResponseEntity<>(empBuscado, HttpStatus.FORBIDDEN);
             log.error("Error al traer la informacion en la sincronizacion ",ex);
         }finally
         {
@@ -102,25 +104,27 @@ public class SincronizacionController extends DAO
         return response;
     }
     
-    @GetMapping("/asistencia")
-    public ResponseEntity<List<Asistencia>> sincronizarAsistenciaCompleta() 
+    @GetMapping("/asistenciaCompleta")
+    public ResponseEntity<List<Asistencia>> sincronizarAsistenciaCompleta(@RequestParam String fecha) 
     {
         ResponseEntity<List<Asistencia>> response = null;
-        List<Asistencia> asistenciaBuscado;
+        List<Asistencia> asistenciaBuscado = null;
         Connection conn = null;
         try{
             conn = Conexion.dsConexion();
-            asistenciaBuscado = sinAsistencia.asistenciaEmpleados(conn, asistenciaService);
-            log.info("Asistencia: " + asistenciaBuscado.toString());
+            asistenciaBuscado = sinAsistencia.asistenciaEmpleados(conn, asistenciaService, fecha);
             response = new ResponseEntity<List<Asistencia>>(asistenciaBuscado, HttpStatus.OK);
-        }catch(SQLException | ClassNotFoundException ex)
+        }catch(SQLException | ClassNotFoundException | JsonProcessingException ex)
         {
-            log.error("Error al guardar la informacion a la base de datos ",ex);
+            log.error("Error al guardar la informacion a la base de datos {}",ex);
         }
         catch(FingerPrintException ex)
         {
-            //response = new ResponseEntity<>(empBuscado, HttpStatus.FORBIDDEN);
-            log.error("Error al traer la informacion en la sincronizacion ",ex);
+            response = new ResponseEntity<>(asistenciaBuscado, HttpStatus.FORBIDDEN);
+            log.error("Error al traer la informacion en la sincronizacion {}", ex);
+        }catch(Exception ex)
+        {
+            log.error("Hubo algún error {}", ex);
         }finally
         {
             close(conn);
@@ -128,11 +132,39 @@ public class SincronizacionController extends DAO
         return response;
     }
     
-    @InitBinder
+    @GetMapping("/asistenciaIncompleta")
+    public ResponseEntity<List<Asistencia>> sincronizaEmpleados(@RequestParam String fecha) {
+        ResponseEntity<List<Asistencia>> response = null;
+        List<Asistencia> asistenciaBuscado = null;
+        Connection conn = null;
+        
+        try{
+            conn = Conexion.dsConexion();
+            sinEmpleado.sincronizaEmpleadoSinHuellas(conn, empleadoService);
+            asistenciaBuscado = sinAsistencia.actualizarAsistenciaEmpleados(conn, asistenciaService, fecha);
+            response = new ResponseEntity<List<Asistencia>>(asistenciaBuscado, HttpStatus.OK);
+        }catch(SQLException | ClassNotFoundException | JsonProcessingException ex)
+        {
+            log.error("Error al guardar la informacion a la base de datos ",ex);
+        }catch(FingerPrintException ex)
+        {
+            response = new ResponseEntity<>(asistenciaBuscado, HttpStatus.FORBIDDEN);
+            log.error("Error al traer la informacion en la sincronizacion ",ex);
+        }catch(Exception ex)
+        {
+            log.error("Hubo algún error {}", ex);
+        }finally
+        {
+            close(conn);
+        }
+        return response;
+    }
+    
+    /*@InitBinder
     public void initBinder(WebDataBinder binder) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-ddTHH:mm:ss");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
         dateFormat.setLenient(false);
         binder.registerCustomEditor(Date.class, new CustomDateEditor(dateFormat, false));
-    }
+    }*/
     
 }

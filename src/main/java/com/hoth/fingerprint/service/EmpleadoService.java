@@ -4,10 +4,12 @@
  */
 package com.hoth.fingerprint.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.hoth.fingerprint.model.response.SGPEmpleadoResponse;
 //import com.hoth.fingerprint.tools.RestTemplateConfig;
 import java.nio.charset.Charset;
 import java.util.List;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,6 +19,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -41,9 +44,27 @@ public class EmpleadoService
     public SGPEmpleadoResponse obtenerEmpleadoPorId(String numeroEmpleado)
     {
         String urlCompleta = this.url + "/empleado/" + numeroEmpleado;
-        HttpEntity entity = new HttpEntity<String>(createHeaders(this.usuario, this.contrasenia));
-        ResponseEntity<SGPEmpleadoResponse> response = restTemplate.exchange(urlCompleta, HttpMethod.GET, entity, SGPEmpleadoResponse.class);
-        SGPEmpleadoResponse empleadoResponse = response.getBody();
+        HttpEntity entity = null;
+        SGPEmpleadoResponse empleadoResponse = null;
+        ResponseEntity<SGPEmpleadoResponse> response = null;
+        try{
+            entity = new HttpEntity<String>(createHeaders(this.usuario, this.contrasenia));
+            response = restTemplate.exchange(urlCompleta, HttpMethod.GET, entity, SGPEmpleadoResponse.class);
+            empleadoResponse = response.getBody();
+        }catch(HttpClientErrorException.NotFound ex)
+        {
+            String error = ex.getResponseBodyAsString();
+            ObjectMapper objectMapper = new ObjectMapper();
+            log.info("Empleado no encontrado: {}", error);
+            try
+            {
+                SGPEmpleadoResponse errorResponse = objectMapper.readValue(error, SGPEmpleadoResponse.class);
+                return errorResponse;
+            }catch(JsonProcessingException jsonException)
+            {
+                log.info("Empleado no encontrado: {}", jsonException);
+            }
+        }
         return empleadoResponse;
     }
     

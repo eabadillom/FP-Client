@@ -134,19 +134,17 @@ public class FingerprintController {
                                         log.debug("Respuesta del challenge servlet: {}", jsonChallengeResponse);
                                         Integer codigoError = jsonChallengeResponse.getCodigoError();
                                     	
-                                        //match = registros.comprobarHuella(jsonChallengeResponse.getHuella(), jsonChallengeResponse.getHuella2(), json.getCaptura()); 
-					match = registros.comprobarHuella(validateHuella, validateHuella2, huellaCapturada);
-                                        
+                                        match = registros.comprobarHuella(validateHuella, validateHuella2, huellaCapturada);
+                                        log.info("Valor match de huella: {}", match);
                                         Connection conn = null;
                                         boolean registroEmpleadoCompletado = registros.registrarEmpleado(conn, numeroEmpleado, jsonChallengeResponse.getHuella(), jsonChallengeResponse.getHuella2());
-                                        if(registroEmpleadoCompletado != true)
+                                        if(registroEmpleadoCompletado == true)
                                         {
                                             log.info("Empleado registrado exitosamente!!!");
                                         }else
                                         {
-                                            log.info("El empleado no se registro!!!");
+                                            log.info("Empleado ya registrado!!!");
                                         }
-                                        close(conn);
                                         
                                         log.trace("Valor de match .............. . . .: {}",match);
 
@@ -177,7 +175,13 @@ public class FingerprintController {
                     
                     try 
                     {
-                        registros.registrarAsistencia(json.getNumeroEmpleado(), json.getCaptura());
+                        String numeroEmpleado = json.getNumeroEmpleado();
+                        //fmd = registros.decodificar(json.getCaptura());
+                        //biometrico = fmd.getData();
+                        //b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
+                        String huellaCaptura = json.getCaptura();
+                        
+                        registros.registrarAsistencia(numeroEmpleado, huellaCaptura);
                         
                         biometric = new BiometricResponse();
                         biometric.setLastCodeError(1);
@@ -189,6 +193,15 @@ public class FingerprintController {
                         log.info("Problema encontrado en la asistencia!!!", ex1.getMessage());
                         throw new Exception("Hubo algun problema con la base de datos");
                     }
+                }catch(NegativeArraySizeException ex)
+                {
+                    log.error("Problema al comparar biometricos... {}", ex.toString());
+                    biometric = new BiometricResponse();
+                    biometric.setLastCodeError(1);
+                    biometric.setLastMessageError("Ocurrio un problema con la comparacion de huella, por favor avisa a tu "
+                            + "administrador de sistemas");
+
+                    response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
                 }catch(Exception ex) {
 			log.error("Problema para obtener el biometrico...", ex);
 			biometric = new BiometricResponse();

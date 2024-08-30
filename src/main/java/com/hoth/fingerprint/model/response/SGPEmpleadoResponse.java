@@ -15,7 +15,6 @@ public class SGPEmpleadoResponse extends SGPEmpleadoRequest
 {
     private Integer codigoError = null;
     private String mensajeError = null;
-    private String token = null;
 
     public SGPEmpleadoResponse() {
         super();
@@ -37,14 +36,6 @@ public class SGPEmpleadoResponse extends SGPEmpleadoRequest
         this.mensajeError = mensajeError;
     }
 
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-    
     @Override
     public int hashCode() {
         int hash = 5;
@@ -69,7 +60,7 @@ public class SGPEmpleadoResponse extends SGPEmpleadoRequest
 
     @Override
     public String toString() {
-        return "SincronizacionEmpleadoResponse{" + "codigoError=" + codigoError + ", mensajeError=" + mensajeError + ", token=" + token + '}';
+        return "SincronizacionEmpleadoResponse{" + "codigoError=" + codigoError + ", mensajeError=" + mensajeError + '}';
     }
     
     

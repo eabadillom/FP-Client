@@ -5,9 +5,7 @@
 package com.hoth.fingerprint.service;
 
 import com.hoth.fingerprint.model.request.SGPAsistenciaRequest;
-import com.hoth.fingerprint.model.request.SGPEmpleadoRequest;
 import com.hoth.fingerprint.model.response.SGPAsistenciaResponse;
-import com.hoth.fingerprint.model.response.SGPEmpleadoResponse;
 import java.nio.charset.Charset;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -33,10 +31,9 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class AsistenciaService 
 {
-    private static Logger log = LogManager.getLogger(EmpleadoService.class);
+    private static Logger log = LogManager.getLogger(AsistenciaService.class);
     private RestTemplate restTemplate;
     private String url = "http://192.168.1.15:8080/sgp-api/fp-client";
-    RestTemplate configuracion = new RestTemplate();
     private final String usuario = "PLANTA1";
     private final String contrasenia = "abc123@";
 
@@ -50,19 +47,14 @@ public class AsistenciaService
         ZonedDateTime zonedDateTime = ZonedDateTime.now();
         zonedDateTime.withZoneSameLocal(ZoneId.of("UTC-6"));
         String urlCompleta = this.url + "/empleado";
-        List<SGPAsistenciaRequest> auxRequest = asistenciaRequest;
-        log.info("Aux Request: " + auxRequest.toString());
         HttpHeaders headers = createHeaders(this.usuario, this.contrasenia);
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setDate(zonedDateTime);
-        //headers.setContentType(MediaType.APPLICATION_JSON);
         
-        HttpEntity<List<SGPAsistenciaRequest>> entity = new HttpEntity<>(auxRequest, headers);
-        log.info("Aux Request Converted: " + entity.toString());
+        HttpEntity<List<SGPAsistenciaRequest>> entity = new HttpEntity<>(asistenciaRequest, headers);
         ParameterizedTypeReference typeReference = new ParameterizedTypeReference<List<SGPAsistenciaResponse>>() {};
         ResponseEntity<List<SGPAsistenciaResponse>> response = restTemplate.exchange(urlCompleta, HttpMethod.POST, entity, typeReference);
         List<SGPAsistenciaResponse> listaAsistenciaResponse = response.getBody();
-        log.info("Aux Request: " + listaAsistenciaResponse.toString());
         return listaAsistenciaResponse;
     }
     

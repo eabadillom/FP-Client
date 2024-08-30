@@ -8,23 +8,14 @@ import static com.hoth.fingerprint.dao.DAO.close;
 import com.hoth.fingerprint.exceptions.FingerPrintException;
 import com.hoth.fingerprint.model.domain.Asistencia;
 import com.hoth.fingerprint.interfaces.DAOInterface;
+import com.hoth.fingerprint.tools.DateUtils;
 import java.util.List;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
 import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -36,10 +27,11 @@ import org.apache.logging.log4j.Logger;
 public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
 {
     private static Logger log = LogManager.getLogger(AsistenciaDAO.class);
+    DateUtils fechaUtils = new DateUtils();
     private static final String SELECT = "select id_asistencia, numero_empleado, fecha_entrada, fecha_salida, b from asistencia ";
-    private static final String SELECTTODOSREGISTROS = "select id_asistencia, numero_empleado, fecha_entrada, fecha_salida from asistencia ";
+    private static final String SELECTNOREGISTROS = "select id_asistencia, asistencia.numero_empleado, fecha_entrada, fecha_salida, b from asistencia , datos_b ";
     private static final String INSERT = "insert into asistencia (numero_empleado, fecha_entrada, fecha_salida, b) values (?, ?, ?, ?)";
-    private static final String UPDATE = "update asistencia set fecha_salida = ? ";
+    private static final String UPDATE = "update asistencia ";
     private static final String DELETE = "delete from asistencia ";
     
     
@@ -51,22 +43,9 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
         UUID uuid = (java.util.UUID) rs.getObject("id_asistencia");
         model.setIdAsistencia(uuid);
         model.setNumeroEmpleado(getTrim(rs.getString("numero_empleado")));
-        model.setFechaEntrada(dateWithTimeZone(getDate(rs.getTimestamp("fecha_entrada"))));
-        model.setFechaSalida(dateWithTimeZone(getDate(rs.getTimestamp("fecha_salida"))));
+        model.setFechaEntrada(getDate(rs.getTimestamp("fecha_entrada")));
+        model.setFechaSalida(getDate(rs.getTimestamp("fecha_salida")));
         model.setB1(getTrim(rs.getString("b")));
-        
-        return model;
-    }
-    
-    public Asistencia getModel2(ResultSet rs) throws SQLException
-    {
-        Asistencia model = new Asistencia();
-        
-        UUID uuid = (java.util.UUID) rs.getObject("id_asistencia");
-        model.setIdAsistencia(uuid);
-        model.setNumeroEmpleado(getTrim(rs.getString("numero_empleado")));
-        model.setFechaEntrada(dateWithTimeZone(getDate(rs.getTimestamp("fecha_entrada"))));
-        model.setFechaSalida(dateWithTimeZone(getDate(rs.getTimestamp("fecha_salida"))));
         
         return model;
     }
@@ -140,6 +119,7 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
         PreparedStatement ps = null;
         ResultSet rs = null;
         String buscarPorId = null;
+        int indice = 0;
         
         try
         {
@@ -153,7 +133,7 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             
             buscarPorId = SELECT + "where numero_empleado = ?";
             ps = con.prepareStatement(buscarPorId);
-            ps.setString(1, id);
+            ps.setString(++indice, getTrim(id));
             rs = ps.executeQuery();
             
             if(rs == null){
@@ -175,12 +155,13 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
         return model;
     }
     
-    public Asistencia obtenerDatoActual(Connection con, String id, Date fechaActual) throws SQLException, FingerPrintException 
+    public Asistencia obtenerDatoPorFecha(Connection con, String id, Date fechaActual) throws SQLException, FingerPrintException 
     {
         Asistencia model = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
         String buscarPorFecha = null;
+        int indice = 0;
         
         try
         {
@@ -188,19 +169,10 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
                 throw new FingerPrintException("El id de asistencia no debe de ser un dato vacio.");
             }
             
-            buscarPorFecha = "select id_asistencia, numero_empleado, cast(fecha_entrada as date) as event_date from asistencia where numero_empleado = ? and cast(fecha_entrada as date) = ?";
+            buscarPorFecha = SELECT + "where numero_empleado = ? and cast(fecha_entrada as date) = ?";
             ps = con.prepareStatement(buscarPorFecha);
-            ps.setString(1, getTrim(id));
-            //Date date = java.sql.Date.valueOf(fechaActual);
-            log.info("Fecha ya formateada: " + fechaActual.toString());
-            //LocalDateTime localtime = fechaActual.atStartOfDay();
-            //Instant instant = localtime.toInstant(ZoneOffset.UTC);
-            //Timestamp timestamp = Timestamp.from(instant);
-            //SimpleDateFormat formated = new SimpleDateFormat("yyyy-MM-dd");
-            //String formattedDate = formated.format(timestamp);
-            //log.info("Fecha ya formateada: " + instant.toString());
-            
-            ps.setDate(2, getSqlDate(fechaActual));
+            ps.setString(++indice, getTrim(id));
+            ps.setDate(++indice, getSqlDate(fechaActual));
             rs = ps.executeQuery();
             
             if(rs == null){
@@ -210,6 +182,7 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             if(rs.next())
             {
                 model = getModel(rs);
+                log.info("Model: " + model);
                 log.info("Se obtuvo la asistencia satisfactoriamente");
             }
             
@@ -259,18 +232,21 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
         return listaModel;
     }
     
-    public List<Asistencia> obtenerElementosRegistrados(Connection con) throws SQLException, FingerPrintException
+    public List<Asistencia> obtenerElementosRegistrados(Connection con, Date fecha) throws SQLException, FingerPrintException
     {
         List<Asistencia> listaModel = null;
         Asistencia model = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
         String buscarTodos = null;
+        int indice = 0;
         
         try
         {
-            buscarTodos = SELECTTODOSREGISTROS + "where fecha_entrada is not null and fecha_salida is not null";
+            buscarTodos = SELECT + "where fecha_entrada is not null and b is null and cast(fecha_entrada as date) = ?";
             ps = con.prepareStatement(buscarTodos);
+            ps.setDate(++indice, getSqlDate(fecha));
+            
             rs = ps.executeQuery();
             listaModel = new ArrayList<>();
             
@@ -280,7 +256,45 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             
             while(rs.next())
             {
-                model = getModel2(rs);
+                model = getModel(rs);
+                listaModel.add(model);
+            }
+            log.info("Se cargo la lista de asistencia satisfactoriamente");
+            
+        }finally
+        {
+            close(ps);
+            close(rs);
+        }
+        
+        return listaModel;
+    }
+    
+    
+    public List<Asistencia> obtenerElementosNoRegistrados(Connection con) throws SQLException, FingerPrintException
+    {
+        List<Asistencia> listaModel = null;
+        Asistencia model = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        String buscarTodos = null;
+        int indice = 0;
+        
+        try
+        {
+            buscarTodos = SELECTNOREGISTROS + "where fecha_entrada is not null and b is not null and asistencia.numero_empleado = datos_b.numero_empleado and (b1 is not null or b2 is not null)";
+            ps = con.prepareStatement(buscarTodos);
+            
+            rs = ps.executeQuery();
+            listaModel = new ArrayList<>();
+            
+            if(rs == null){
+                throw new FingerPrintException("Ocurrio algo con la base de datos");
+            }
+            
+            while(rs.next())
+            {
+                model = getModel(rs);
                 listaModel.add(model);
             }
             log.info("Se cargo la lista de asistencia satisfactoriamente");
@@ -310,10 +324,10 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             
             guardarConsulta = INSERT;
             ps = con.prepareStatement(guardarConsulta);
-            ps.setString(++indice, t.getNumeroEmpleado());
+            ps.setString(++indice, getTrim(t.getNumeroEmpleado()));
             ps.setTimestamp(++indice, getTimestamp(t.getFechaEntrada()));
             ps.setTimestamp(++indice, getTimestamp(t.getFechaSalida()));
-            ps.setString(++indice, t.getB1());
+            ps.setString(++indice, getTrim(t.getB1()));
             resultUpdate = ps.executeUpdate();
             
             if(resultUpdate != 0)
@@ -333,6 +347,7 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
     @Override
     public void actualizarElemento(Connection con, Asistencia t) throws SQLException, FingerPrintException {
         int resultUpdate = 0;
+        int indice = 0;
         String modificarConsulta = null;
         PreparedStatement ps = null;
         
@@ -348,10 +363,17 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
                 throw new FingerPrintException("El numero de asistencia no debe ser una dato vacio");
             }
             
-            modificarConsulta = UPDATE + "where id_asistencia = ?";
+            modificarConsulta = UPDATE + "set fecha_salida = ?, b = ? where id_asistencia = ?";
             ps = con.prepareStatement(modificarConsulta);
-            ps.setTimestamp(1, getTimestamp(t.getFechaSalida()));
-            ps.setObject(2, t.getIdAsistencia());
+            ps.setTimestamp(++indice, getTimestamp(t.getFechaSalida()));
+            if(t.getB1() == null)
+            {
+                ps.setString(++indice, null);
+            }else
+            {
+                ps.setString(++indice, getTrim(t.getB1()));
+            }
+            ps.setObject(++indice, t.getIdAsistencia());
             resultUpdate = ps.executeUpdate();
             if(resultUpdate != 0)
             {
@@ -373,6 +395,7 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
     public void borrarElemento(Connection con, Asistencia t) throws SQLException, FingerPrintException
     {
         int resultDelete = 0;
+        int indice = 0;
         String borrarConsulta = null;
         PreparedStatement ps = null;
         
@@ -382,9 +405,9 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
                 throw new FingerPrintException("El cliente no debe de ser un objeto vacio o nulo.");
             }
             
-            borrarConsulta = DELETE + "where numero_empleado = ?";
+            borrarConsulta = DELETE + "where id_asistencia = ?";
             ps = con.prepareStatement(borrarConsulta);
-            ps.setString(1, t.getNumeroEmpleado());
+            ps.setObject(++indice, t.getIdAsistencia());
             resultDelete = ps.executeUpdate();
             
             if(resultDelete != 0)
@@ -398,15 +421,6 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
         {
             close(ps);
         }
-    }
-    
-    public Date dateWithTimeZone(Date fecha)
-    {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(fecha);
-        calendar.setTimeZone(TimeZone.getTimeZone("Etc/GMT-6"));
-        Date utcDate = calendar.getTime();
-        return utcDate;
     }
     
 }

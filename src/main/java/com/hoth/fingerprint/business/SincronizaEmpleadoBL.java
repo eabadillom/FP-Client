@@ -39,7 +39,6 @@ public class SincronizaEmpleadoBL
         empleadoResponse = empleadoService.obtenerListaEmpleados();
         List<Empleado> empleados = new ArrayList<Empleado>();
         empDAO.crearTabla(conn);
-        empDAO.borrarTabla(conn);
         
         for(SGPEmpleadoResponse auxEmpleadoResponse : empleadoResponse)
         {
@@ -48,7 +47,13 @@ public class SincronizaEmpleadoBL
             nuevoEmpleado.setB1(auxEmpleadoResponse.getBiometrico1());
             nuevoEmpleado.setB2(auxEmpleadoResponse.getBiometrico2());
             empleados.add(nuevoEmpleado);
-            empDAO.guardarElemento(conn, nuevoEmpleado);
+            Empleado auxNuevo = empDAO.obtenerDato(conn, nuevoEmpleado.getNumeroEmpleado());
+            if(auxNuevo == null)
+            {
+                empDAO.guardarElemento(conn, nuevoEmpleado);
+            }else{
+                empDAO.actualizarElemento(conn, nuevoEmpleado);
+            }
         }
         return empleados;
     }
@@ -79,6 +84,33 @@ public class SincronizaEmpleadoBL
         }
         
         return auxEmpleado;
+    }
+    
+    public void sincronizaEmpleadoSinHuellas(Connection conn, EmpleadoService empleadoService) throws SQLException, FingerPrintException, ClassNotFoundException
+    {
+        List<SGPEmpleadoResponse> empleadoResponse = new ArrayList<SGPEmpleadoResponse>();
+        empDAO.crearTabla(conn);
+        List<Empleado> auxListaEmpleadoSinHuellas = empDAO.obtenerEmpleadoSinHuella(conn);
+        
+        for(Empleado aux : auxListaEmpleadoSinHuellas)
+        {
+            empleadoResponse.add(empleadoService.obtenerEmpleadoPorId(aux.getNumeroEmpleado()));
+        }
+        
+        for(SGPEmpleadoResponse auxEmpleadoResponse : empleadoResponse)
+        {
+            if(auxEmpleadoResponse.getCodigoError() == 0){
+                Empleado nuevoEmpleado = new Empleado();
+                nuevoEmpleado.setNumeroEmpleado(auxEmpleadoResponse.getNumero());
+                nuevoEmpleado.setB1(auxEmpleadoResponse.getBiometrico1());
+                nuevoEmpleado.setB2(auxEmpleadoResponse.getBiometrico2());
+                empDAO.actualizarElemento(conn, nuevoEmpleado);
+            }else
+            {
+                log.info("Empleado no entonctrado en SGP: {}", auxEmpleadoResponse);
+            }
+        }
+        
     }
     
 }

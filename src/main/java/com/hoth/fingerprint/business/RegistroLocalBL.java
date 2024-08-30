@@ -22,10 +22,7 @@ import com.hoth.fingerprint.tools.DateUtils;
 import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
 import java.util.Base64;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
 import java.util.UUID;
 
 /**
@@ -75,31 +72,41 @@ public class RegistroLocalBL
     
     public boolean comprobarHuella(String b1, String b2, String captura)
     {
-        log.debug("Iniciando validacion...");
-        //arreglo de biometricos
-        Fmd[] fmd_s = new Fmd[3];
-        Fmd capturaFmd = null;
-        //Fmd enrolamientoFmd = null;
+        boolean exitoso;
+        try{
+            log.debug("Iniciando validacion...");
+            //arreglo de biometricos
+            Fmd[] fmd_s = new Fmd[3];
+            Fmd capturaFmd = null;
+            //Fmd enrolamientoFmd = null;
 
-        Fmd huella = null;
-        Fmd huella2 = null;
+            Fmd huella = null;
+            Fmd huella2 = null;
 
-        log.info("Validando biometricos...");
-        capturaFmd = decodificar(captura);
-        log.debug("capturaFmd: {}",capturaFmd);					
+            log.info("Validando biometricos...");
+            capturaFmd = decodificar(captura);
+            log.debug("capturaFmd: {}",capturaFmd);					
 
-        huella = decodificar(b1);
-        log.trace("huella {}",huella);
-        huella2 = decodificar(b2);
-        log.trace("huella2 {}",huella2);
+            huella = decodificar(b1);
+            log.trace("huella {}",huella);
+            huella2 = decodificar(b2);
+            log.trace("huella2 {}",huella2);
 
-        fmd_s[0] = capturaFmd;
-        fmd_s[1] = huella;
-        fmd_s[2] = huella2;
+            fmd_s[0] = capturaFmd;
+            fmd_s[1] = huella;
+            fmd_s[2] = huella2;
 
-        Verification.Run(fmd_s);
+            Verification.Run(fmd_s);
+            exitoso = Verification.isFinger_M();
+            return exitoso;
+        }catch(NegativeArraySizeException ex)
+        {
+            log.error("Hubo un error en la comparacion de las huellas!!! ", ex);
+            return false;
+            //throw new NegativeArraySizeException("Problema al comparar huellas");
+        }
 
-        return Verification.isFinger_M();
+        
     }
 
     public boolean registrarEmpleado(Connection conn, String numeroEmpleado, String huella1, String huella2) throws FingerPrintException
@@ -119,13 +126,17 @@ public class RegistroLocalBL
                 emp.setNumeroEmpleado(numeroEmpleado);
                 emp.setB1(huella1);
                 emp.setB2(huella2);
+                this.empDAO.guardarElemento(conn, emp);
                 resultado = true;
             }
 
         }catch(Exception ex)
         {
             log.error("Hubo un problema al registrar al empleado ", ex.getMessage());
-            throw new FingerPrintException("Problema al realizar la conexión");
+            //throw new FingerPrintException("Problema al realizar la conexión");
+        }finally
+        {
+            close(conn);
         }
 
         return resultado;
@@ -136,16 +147,14 @@ public class RegistroLocalBL
         Connection conn = null;
         log.info("Entrado al metodo de registrar asistencia");
         UUID uuidAux;
-        Date fecha = null;
-        Calendar cal = null;
-        cal = Calendar.getInstance(TimeZone.getTimeZone("GMT-6:00"), new Locale("es", "MX"));
-        fecha = cal.getTime();
-        //log.info("Fecha: " + fecha.toString());
+        Date fecha = fechaUtils.obtenerFechaSistema();
+        log.info("Fecha: " + fecha.toString());
         Date fechaNueva = fechaUtils.LocalDate(fecha);
-        //log.info("Fecha convertida: "+fechaNueva.toString());
+        log.info("Fecha convertida: "+fechaNueva.toString());
         try
         {
             conn = Conexion.dsConexion();
+            this.empDAO.crearTabla(conn);
             this.asistenciaDAO.crearTabla(conn);
 
             Empleado emp = this.empDAO.obtenerDato(conn, numeroEmpleado);
@@ -157,7 +166,7 @@ public class RegistroLocalBL
                     boolean exitoso = comprobarHuella(emp.getB1(), emp.getB2(), captura);
                     if(exitoso == true)
                     {
-                        Asistencia asistenciaVer = asistenciaDAO.obtenerDatoActual(conn, emp.getNumeroEmpleado(), fechaNueva);
+                        Asistencia asistenciaVer = asistenciaDAO.obtenerDatoPorFecha(conn, emp.getNumeroEmpleado(), fechaNueva);
                         if(asistenciaVer != null)
                         {
                             uuidAux = asistenciaVer.getIdAsistencia();
@@ -167,22 +176,13 @@ public class RegistroLocalBL
                         {
                             asistenciaGuardarElemento(conn, emp, fecha, null);
                         }
-                        /*if(asistenciaVer != null)
-                        {
-                            uuidAux = asistenciaVer.getIdAsistencia();
-                            asistenciaActualizarElemento(conn, emp, fecha, null, uuidAux);
-                        }else
-                        {
-                            asistenciaGuardarElemento(conn, emp, fecha, null);
-                        }*/
                     }else
                     {
                         log.error("Comparacion no exitosa");
-                        throw new FingerPrintException("Problemas al realizar la validacion...");
                     }
                 }else
                 {
-                    Asistencia asistenciaVer = asistenciaDAO.obtenerDato(conn, emp.getNumeroEmpleado());
+                    Asistencia asistenciaVer = asistenciaDAO.obtenerDatoPorFecha(conn, emp.getNumeroEmpleado(), fechaNueva);
                     if(asistenciaVer != null)
                     {
                         uuidAux = asistenciaVer.getIdAsistencia();
@@ -226,7 +226,6 @@ public class RegistroLocalBL
         }catch(Exception ex)
         {
             log.error("Hubo un problema al registrar la asistencia ", ex.getMessage());
-            throw new FingerPrintException("Problema al guardar la asistencia");
         }
     }
     
@@ -244,7 +243,6 @@ public class RegistroLocalBL
         }catch(Exception ex)
         {
             log.error("Hubo un problema al registrar la asistencia ", ex.getMessage());
-            throw new FingerPrintException("Problema al guardar la asistencia");
         }
     }
     
