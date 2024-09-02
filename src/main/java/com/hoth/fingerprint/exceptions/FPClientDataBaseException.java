@@ -2,32 +2,32 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.hoth.fingerprint.tools;
+package com.hoth.fingerprint.exceptions;
 
 /**
  *
  * @author Alberto
  */
-public class FPComunicationException extends Exception
+public class FPClientDataBaseException extends Exception
 {
     private static final long serialVersionUID = -829097821834065662L;
 
-    public FPComunicationException() 
+    public FPClientDataBaseException() 
     {
         super();
     }
 
-    public FPComunicationException(String message) 
+    public FPClientDataBaseException(String message) 
     {
         super(message);
     }
 
-    public FPComunicationException(Throwable cause) 
+    public FPClientDataBaseException(Throwable cause) 
     {
         super(cause);
     }
 
-    public FPComunicationException(String message, Throwable cause) 
+    public FPClientDataBaseException(String message, Throwable cause) 
     {
         super(message, cause);
     }

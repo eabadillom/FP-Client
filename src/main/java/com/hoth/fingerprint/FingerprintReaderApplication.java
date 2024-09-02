@@ -3,6 +3,7 @@ package com.hoth.fingerprint;
 import java.awt.Container;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
+import java.util.TimeZone;
 
 import javax.swing.GroupLayout;
 import javax.swing.JButton;
@@ -25,6 +26,7 @@ public class FingerprintReaderApplication extends JFrame {
 
 
 	public static void main(String[] args) {
+            TimeZone.setDefault(TimeZone.getTimeZone("GMT-6"));
 		//SpringApplication.run(FingerprintReaderApplication.class, args);
 		ConfigurableApplicationContext ctx = new SpringApplicationBuilder(FingerprintReaderApplication.class)
 				.headless(false).web(WebApplicationType.SERVLET).run(args);
