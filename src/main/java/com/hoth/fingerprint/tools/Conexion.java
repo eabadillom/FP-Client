@@ -23,7 +23,7 @@ public class Conexion
     private static Logger log = LogManager.getLogger(Conexion.class);
 	
     public static synchronized Connection dsConexion() throws SQLException, ClassNotFoundException {
-        log.info("Entrando a la conexion");
+        log.debug("Entrando a la conexion");
         Connection conn = null;
         String JDBC_DRIVER = "org.h2.Driver";
         String DB_URL = "jdbc:h2:~/asistencia";

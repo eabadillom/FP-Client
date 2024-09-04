@@ -59,10 +59,10 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             
             if(creacionTabla != 0)
             {
-                log.info("Tabla creada exitosamente!!!");
+                log.debug("Tabla creada exitosamente!!!");
             }else
             {
-                log.info("Tabla ya creada");
+                log.debug("Tabla ya creada");
             }
         }finally
         {
@@ -88,14 +88,13 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             
             if(creacionTabla != 0)
             {
-                log.info("Contenido de la tabla borrada exitosamente!!!");
+                log.debug("Contenido de la tabla borrada exitosamente!!!");
             }else
             {
-                log.info("Tabla ya limpia");
+                log.debug("Tabla ya limpia");
             }
         }finally
         {
-            log.info("Cerrando Conexion");
             close(ps);
         }
     }
@@ -130,7 +129,7 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             if(rs.next())
             {
                 model = getModel(rs);
-                log.info("Se obtuvo el empleado satisfactoriamente");
+                log.debug("Se obtuvo el empleado {} satisfactoriamente", model.getNumeroEmpleado());
             }
         } finally
         {
@@ -164,7 +163,7 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
                 model = getModel(rs);
                 listaModel.add(model);
             }
-            log.info("Se cargo la lista de empleados satisfactoriamente");
+            log.debug("Se cargo la lista de empleados satisfactoriamente");
             
         }finally
         {
@@ -199,7 +198,7 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
                 model = getModel(rs);
                 listaModel.add(model);
             }
-            log.info("Empleado obtenido satisfactoriamente");
+            log.debug("Lista de empleados obtenido satisfactoriamente");
         }
         finally
         {
@@ -232,9 +231,9 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             resultUpdate = ps.executeUpdate();
             
             if(resultUpdate != 0){
-                log.info("Se guardo el empleado satisfactoriamente");
+                log.debug("Se guardo el empleado {} satisfactoriamente", t.getNumeroEmpleado());
             }else{
-                log.error("No se guardo el empleado");
+                log.error("No se guardo el empleado {}", t.getNumeroEmpleado());
                 throw new FingerPrintException("Hubo un problema en la base de datos.");
             }
         }finally
@@ -273,10 +272,10 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             
             if(resultUpdate != 0)
             {
-                log.info("Se actualizo correctamente el empleado!!!");
+                log.debug("Se actualizo correctamente el empleado {}!!!", t.getNumeroEmpleado());
             }else
             {
-                log.error("No se actualizo el empleado");
+                log.error("No se actualizo el empleado {}", t.getNumeroEmpleado());
             }
         }finally
         {
@@ -304,9 +303,10 @@ public class EmpleadoDAO extends DAO implements DAOInterface<Empleado>
             resultDelete = ps.executeUpdate();
             
             if(resultDelete != 0){
-                log.info("Se borro el empleado satisfactoriamente");
+                log.debug("Se borro el empleado {} satisfactoriamente", t.getNumeroEmpleado());
+                log.info("Se borro el empleado {} satisfactoriamente", t.getNumeroEmpleado());
             }else{
-                log.error("No se borro el empleado");
+                log.error("No se borro el empleado {}", t.getNumeroEmpleado());
                 throw new FingerPrintException("Hubo un problema en la base de datos.");
             }
         }finally

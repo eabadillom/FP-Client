@@ -6,8 +6,6 @@ package com.hoth.fingerprint.model.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.Date;
 import java.util.Objects;
 import java.util.UUID;
 

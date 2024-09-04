@@ -21,6 +21,7 @@ import com.hoth.fingerprint.tools.Conexion;
 import com.hoth.fingerprint.tools.DateUtils;
 import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
@@ -103,7 +104,6 @@ public class RegistroLocalBL
         {
             log.error("Hubo un error en la comparacion de las huellas!!! ", ex);
             return false;
-            //throw new NegativeArraySizeException("Problema al comparar huellas");
         }
 
         
@@ -112,7 +112,7 @@ public class RegistroLocalBL
     public boolean registrarEmpleado(Connection conn, String numeroEmpleado, String huella1, String huella2) throws FingerPrintException
     {
         boolean resultado = false;
-        log.info("Entrado al metodo de registrar empleado");
+        log.debug("Entrado al metodo de registrar empleado");
         try
         {
             conn = Conexion.dsConexion();
@@ -130,10 +130,10 @@ public class RegistroLocalBL
                 resultado = true;
             }
 
-        }catch(Exception ex)
+        }catch(FingerPrintException | ClassNotFoundException | SQLException ex)
         {
             log.error("Hubo un problema al registrar al empleado ", ex.getMessage());
-            //throw new FingerPrintException("Problema al realizar la conexión");
+            throw new FingerPrintException("Problema al realizar la conexión");
         }finally
         {
             close(conn);
@@ -142,15 +142,14 @@ public class RegistroLocalBL
         return resultado;
     } 
 
-    public void registrarAsistencia(String numeroEmpleado, String captura) throws FingerPrintException
+    public Asistencia registrarAsistencia(String numeroEmpleado, String captura) throws FingerPrintException
     {
         Connection conn = null;
-        log.info("Entrado al metodo de registrar asistencia");
+        log.debug("Entrado al metodo de registrar asistencia");
         UUID uuidAux;
         Date fecha = fechaUtils.obtenerFechaSistema();
-        log.info("Fecha: " + fecha.toString());
         Date fechaNueva = fechaUtils.LocalDate(fecha);
-        log.info("Fecha convertida: "+fechaNueva.toString());
+        Asistencia asistenciaEnvio = new Asistencia();
         try
         {
             conn = Conexion.dsConexion();
@@ -169,27 +168,47 @@ public class RegistroLocalBL
                         Asistencia asistenciaVer = asistenciaDAO.obtenerDatoPorFecha(conn, emp.getNumeroEmpleado(), fechaNueva);
                         if(asistenciaVer != null)
                         {
+                            log.debug("Actualizando registro de asistencia!!!");
                             uuidAux = asistenciaVer.getIdAsistencia();
                             asistenciaActualizarElemento(conn, emp, fecha, null, uuidAux);
-                            
+                            asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
+                            asistenciaEnvio.setFechaEntrada(asistenciaVer.getFechaEntrada());
+                            asistenciaEnvio.setFechaSalida(fecha);
+                            return asistenciaEnvio;
                         }else
                         {
+                            log.debug("Guardando registro de asistencia!!!");
                             asistenciaGuardarElemento(conn, emp, fecha, null);
+                            asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
+                            asistenciaEnvio.setFechaEntrada(fecha);
+                            asistenciaEnvio.setFechaSalida(null);
+                            return asistenciaEnvio;
                         }
                     }else
                     {
-                        log.error("Comparacion no exitosa");
+                        log.error("Comparacion no exitosa del empleado {}", emp.getNumeroEmpleado());
+                        throw new FingerPrintException("Problemas al realizar la validacion!!!");
                     }
                 }else
                 {
                     Asistencia asistenciaVer = asistenciaDAO.obtenerDatoPorFecha(conn, emp.getNumeroEmpleado(), fechaNueva);
                     if(asistenciaVer != null)
                     {
+                        log.debug("Actualizando registro de asistencia!!!");
                         uuidAux = asistenciaVer.getIdAsistencia();
                         asistenciaActualizarElemento(conn, emp, fecha, captura, uuidAux);
+                        asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
+                        asistenciaEnvio.setFechaEntrada(asistenciaVer.getFechaEntrada());
+                        asistenciaEnvio.setFechaSalida(fecha);
+                        return asistenciaEnvio;
                     }else
                     {
+                        log.debug("Guardando registro de asistencia!!!");
                         asistenciaGuardarElemento(conn, emp, fecha, captura);
+                        asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
+                        asistenciaEnvio.setFechaEntrada(fecha);
+                        asistenciaEnvio.setFechaSalida(null);
+                        return asistenciaEnvio;
                     }
                 }
             }else
@@ -200,9 +219,14 @@ public class RegistroLocalBL
                 empNuevo.setB2(null);
                 this.empDAO.guardarElemento(conn, empNuevo);
                 asistenciaGuardarElemento(conn, empNuevo, fecha, captura);
+                asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
+                asistenciaEnvio.setFechaEntrada(fecha);
+                asistenciaEnvio.setFechaSalida(null);
+                asistenciaEnvio.setB1(null);
+                return asistenciaEnvio;
             }
 
-        }catch(Exception ex)
+        }catch(FingerPrintException | ClassNotFoundException | SQLException ex)
         {
             log.error("Hubo un problema al registrar la asistencia ", ex.getMessage());
             throw new FingerPrintException("Problema al guardar la asistencia");
@@ -210,7 +234,6 @@ public class RegistroLocalBL
         {
             close(conn);
         }
-
     }
     
     public void asistenciaGuardarElemento(Connection conn, Empleado emp, Date fecha, String captura) throws FingerPrintException
@@ -223,7 +246,7 @@ public class RegistroLocalBL
             asistencia.setFechaSalida(null);
             asistencia.setB1(captura);
             this.asistenciaDAO.guardarElemento(conn, asistencia);
-        }catch(Exception ex)
+        }catch(FingerPrintException | SQLException ex)
         {
             log.error("Hubo un problema al registrar la asistencia ", ex.getMessage());
         }
@@ -240,9 +263,9 @@ public class RegistroLocalBL
             asistencia.setFechaSalida(fecha);
             asistencia.setB1(captura);
             this.asistenciaDAO.actualizarElemento(conn, asistencia);
-        }catch(Exception ex)
+        }catch(FingerPrintException | SQLException ex)
         {
-            log.error("Hubo un problema al registrar la asistencia ", ex.getMessage());
+            log.error("Hubo un problema al actualizar la asistencia ", ex.getMessage());
         }
     }
     

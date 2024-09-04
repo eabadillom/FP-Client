@@ -15,7 +15,6 @@ public class Asistencia
 {
     private UUID idAsistencia;
     private String numeroEmpleado;
-    //private Empleado datosEmpleado = new Empleado();
     private Date fechaEntrada;
     private Date fechaSalida;
     private String b1;
@@ -35,14 +34,6 @@ public class Asistencia
     public void setNumeroEmpleado(String numeroEmpleado) {
         this.numeroEmpleado = numeroEmpleado;
     }
-    
-    /*public Empleado getDatosEmpleado() {
-        return datosEmpleado;
-    }
-
-    public void setDatosEmpleado(Empleado datosEmpleado) {
-        this.datosEmpleado = datosEmpleado;
-    }*/
 
     public Date getFechaEntrada() {
         return fechaEntrada;

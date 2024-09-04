@@ -4,10 +4,8 @@
  */
 package com.hoth.fingerprint.business;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.hoth.fingerprint.dao.AsistenciaDAO;
 import com.hoth.fingerprint.dao.EmpleadoDAO;
-import com.hoth.fingerprint.exceptions.FingerPrintException;
 import com.hoth.fingerprint.model.domain.Asistencia;
 import com.hoth.fingerprint.model.domain.Empleado;
 import com.hoth.fingerprint.model.request.SGPAsistenciaRequest;
@@ -32,7 +30,7 @@ public class SincronizaAsistenciaBL
     private AsistenciaDAO asistDAO = null;
     private EmpleadoDAO empDAO = null;
     private RegistroLocalBL registros = null;
-    DateUtils fechas = new DateUtils();
+    private DateUtils fechas = new DateUtils();
 
     public SincronizaAsistenciaBL() 
     {
@@ -43,6 +41,7 @@ public class SincronizaAsistenciaBL
     
     public List<Asistencia> asistenciaEmpleados(Connection conn, AsistenciaService asistenciaService, String fecha)  throws Exception
     {
+        log.debug("Entrando a sincronizar datos de la asistencia completa a SGP");
         List<SGPAsistenciaRequest> asistenciaRequest = new ArrayList<SGPAsistenciaRequest>();
         List<Asistencia> listarAsistencia = new ArrayList<Asistencia>();
         asistDAO.crearTabla(conn);
@@ -62,6 +61,7 @@ public class SincronizaAsistenciaBL
             asistenciaRequest.add(auxRequest);
         }
         List<SGPAsistenciaResponse> asistenciaResponse = null;
+        log.debug("Enviando los datos de la BD de asistencia a SGP");
         asistenciaResponse = asistenciaService.enviarListaAsistencia(asistenciaRequest);
         List<Asistencia> asistenciaFinal = new ArrayList<Asistencia>();
         
@@ -75,6 +75,7 @@ public class SincronizaAsistenciaBL
                 nuevaAsistencia.setFechaSalida(fechas.OffsetDateTimeToDate(auxAsistenciaResponse.getHoraSalida()));
             }
             asistenciaFinal.add(nuevaAsistencia);
+            log.debug("Borrando cada elemento de la asistencia en BD local");
             if(auxAsistenciaResponse.getCodigoError() == 0)
             {
                 asistDAO.borrarElemento(conn, nuevaAsistencia);
@@ -86,10 +87,8 @@ public class SincronizaAsistenciaBL
     
     public List<Asistencia> actualizarAsistenciaEmpleados(Connection conn, AsistenciaService asistenciaService, String fecha)  throws Exception
     {
+        log.debug("Actualizar la asistencia en BD local con biometricos");
         List<Asistencia> listarAsistencia = new ArrayList<Asistencia>();
-        //SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-        //Date date = fechas.LocalDate(formatter.parse(fecha));
-        
         listarAsistencia = asistDAO.obtenerElementosNoRegistrados(conn);
         for(Asistencia auxAsistencia : listarAsistencia)
         {
@@ -107,10 +106,10 @@ public class SincronizaAsistenciaBL
                 }
                 asistencia.setB1(null);
                 this.asistDAO.actualizarElemento(conn, asistencia);
-                log.info("Se actualizo el registro de asistencia de {}", asistencia);
+                log.debug("Se actualizo el registro de asistencia de {}", asistencia);
             }else
             {
-                log.info("No se actualizo el empleado {}", auxEmpleado.getNumeroEmpleado());
+                log.error("No se actualizo el empleado {}", auxEmpleado.getNumeroEmpleado());
             }
         }
         
