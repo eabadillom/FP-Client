@@ -14,19 +14,15 @@ import com.hoth.fingerprint.model.domain.Empleado;
 import com.hoth.fingerprint.service.AsistenciaService;
 import com.hoth.fingerprint.service.EmpleadoService;
 import com.hoth.fingerprint.tools.Conexion;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -46,15 +42,16 @@ public class SincronizacionController extends DAO
     private final EmpleadoService empleadoService;
     private final AsistenciaService asistenciaService;
 
-    public SincronizacionController() 
+    public SincronizacionController()
     {
         this.empleadoService = new EmpleadoService();
         this.asistenciaService = new AsistenciaService();
     }
     
     @GetMapping("/empleado/{numeroEmpleado}")
-    public ResponseEntity<Empleado> sincronizarEmpleado(@PathVariable String numeroEmpleado) 
+    public ResponseEntity<Empleado> sincronizarEmpleado(@PathVariable String numeroEmpleado)
     {
+        log.info("Iniciando sincronizacion de un empleado con numero de empleado a SGP...");
         ResponseEntity<Empleado> response = null;
         Empleado empBuscado = null;
         Connection conn = null;
@@ -63,7 +60,7 @@ public class SincronizacionController extends DAO
             empBuscado = sinEmpleado.sincronizaEmpleado(conn, empleadoService, numeroEmpleado);
             
             response = new ResponseEntity<Empleado>(empBuscado, HttpStatus.OK);
-        }catch(SQLException | ClassNotFoundException ex)
+        }catch(SQLException | ClassNotFoundException | IOException  ex)
         {
             log.error("Error al guardar la informacion a la base de datos ",ex);
         }
@@ -73,6 +70,7 @@ public class SincronizacionController extends DAO
             log.error("Error al traer la informacion en la sincronizacion ",ex);
         }finally
         {
+            log.debug("Cerrando conexión a la base de datos");
             close(conn);
         }
         return response;
@@ -81,6 +79,7 @@ public class SincronizacionController extends DAO
     @GetMapping("/empleado")
     public ResponseEntity<List<Empleado>> sincronizarTodosEmpleados() 
     {
+        log.info("Iniciando sincronizacion de todos los empleados a SGP...");
         ResponseEntity<List<Empleado>> response = null;
         List<Empleado> empBuscado = null;
         Connection conn = null;
@@ -89,7 +88,7 @@ public class SincronizacionController extends DAO
             empBuscado = sinEmpleado.sincronizaTodos(conn, empleadoService);
             
             response = new ResponseEntity<List<Empleado>>(empBuscado, HttpStatus.OK);
-        }catch(SQLException | ClassNotFoundException ex)
+        }catch(SQLException | ClassNotFoundException | IOException  ex)
         {
             log.error("Error al guardar la informacion a la base de datos ",ex);
         }
@@ -99,6 +98,7 @@ public class SincronizacionController extends DAO
             log.error("Error al traer la informacion en la sincronizacion ",ex);
         }finally
         {
+            log.debug("Cerrando conexión a la base de datos");
             close(conn);
         }
         return response;
@@ -107,6 +107,7 @@ public class SincronizacionController extends DAO
     @GetMapping("/asistenciaCompleta")
     public ResponseEntity<List<Asistencia>> sincronizarAsistenciaCompleta(@RequestParam String fecha) 
     {
+        log.info("Iniciando sincronizacón de asistencia completa a SGP...");
         ResponseEntity<List<Asistencia>> response = null;
         List<Asistencia> asistenciaBuscado = null;
         Connection conn = null;
@@ -116,30 +117,33 @@ public class SincronizacionController extends DAO
             response = new ResponseEntity<List<Asistencia>>(asistenciaBuscado, HttpStatus.OK);
         }catch(SQLException | ClassNotFoundException | JsonProcessingException ex)
         {
-            log.error("Error al guardar la informacion a la base de datos {}",ex);
+            log.error("Error al guardar la informacion a la base de datos ",ex);
         }
-        catch(FingerPrintException ex)
+        catch(FingerPrintException | IOException  ex)
         {
             response = new ResponseEntity<>(asistenciaBuscado, HttpStatus.FORBIDDEN);
-            log.error("Error al traer la informacion en la sincronizacion {}", ex);
+            log.error("Error al traer la informacion en la sincronizacion ", ex);
         }catch(Exception ex)
         {
-            log.error("Hubo algún error {}", ex);
+            log.error("Hubo algún error ", ex);
         }finally
         {
+            log.debug("Cerrando conexión a la base de datos");
             close(conn);
         }
         return response;
     }
     
     @GetMapping("/asistenciaIncompleta")
-    public ResponseEntity<List<Asistencia>> sincronizaEmpleados(@RequestParam String fecha) {
+    public ResponseEntity<List<Asistencia>> sincronizaEmpleados(@RequestParam String fecha) 
+    {
+        log.info("Iniciando sincronizacón de asistencia incompleta a SGP...");
         ResponseEntity<List<Asistencia>> response = null;
         List<Asistencia> asistenciaBuscado = null;
         Connection conn = null;
-        
         try{
             conn = Conexion.dsConexion();
+            log.debug("Pedir a SGP y actualizar empleados sin huellas en BD local");
             sinEmpleado.sincronizaEmpleadoSinHuellas(conn, empleadoService);
             asistenciaBuscado = sinAsistencia.actualizarAsistenciaEmpleados(conn, asistenciaService, fecha);
             response = new ResponseEntity<List<Asistencia>>(asistenciaBuscado, HttpStatus.OK);
@@ -152,19 +156,13 @@ public class SincronizacionController extends DAO
             log.error("Error al traer la informacion en la sincronizacion ",ex);
         }catch(Exception ex)
         {
-            log.error("Hubo algún error {}", ex);
+            log.error("Hubo algún error ", ex);
         }finally
         {
+            log.debug("Cerrando conexión a la base de datos");
             close(conn);
         }
         return response;
     }
-    
-    /*@InitBinder
-    public void initBinder(WebDataBinder binder) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-        dateFormat.setLenient(false);
-        binder.registerCustomEditor(Date.class, new CustomDateEditor(dateFormat, false));
-    }*/
     
 }

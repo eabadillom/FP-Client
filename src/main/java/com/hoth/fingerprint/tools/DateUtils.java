@@ -4,13 +4,7 @@
  */
 package com.hoth.fingerprint.tools;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -111,19 +105,4 @@ public class DateUtils
         return cal.getTime();
     }
     
-    public OffsetDateTime dateToOffsetDateTime(Date date) throws JsonProcessingException
-    {
-        ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
-            .enable(SerializationFeature.WRITE_DATES_WITH_ZONE_ID)
-            .setTimeZone(TimeZone.getTimeZone("Etc/GTM-6"));
-        final OffsetDateTime expected = date.toInstant().atOffset(ZoneOffset.ofHours(-6));
-        //final OffsetDateTime expected = OffsetDateTime.now(ZoneId.of("Etc/GTM-6"));
-        String actualString = objectMapper.writeValueAsString(expected);
-        //System.out.println("actualString with setting time zone to Asia/Shanghai: " + actualString);
-        OffsetDateTime actual = objectMapper.readValue(actualString, OffsetDateTime.class);
-        return actual;
-    }
 }

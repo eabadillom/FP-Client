@@ -10,6 +10,7 @@ import com.hoth.fingerprint.exceptions.FingerPrintException;
 import com.hoth.fingerprint.model.domain.Empleado;
 import com.hoth.fingerprint.model.response.SGPEmpleadoResponse;
 import com.hoth.fingerprint.service.EmpleadoService;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -33,8 +34,9 @@ public class SincronizaEmpleadoBL
         this.empDAO = new EmpleadoDAO();
     }
     
-    public List<Empleado> sincronizaTodos(Connection conn, EmpleadoService empleadoService) throws SQLException, FingerPrintException, ClassNotFoundException
+    public List<Empleado> sincronizaTodos(Connection conn, EmpleadoService empleadoService) throws SQLException, FingerPrintException, ClassNotFoundException, IOException
     {
+        log.debug("Entrando a sincronizar a todos los empleados");
         List<SGPEmpleadoResponse> empleadoResponse = null;
         empleadoResponse = empleadoService.obtenerListaEmpleados();
         List<Empleado> empleados = new ArrayList<Empleado>();
@@ -58,8 +60,9 @@ public class SincronizaEmpleadoBL
         return empleados;
     }
     
-    public Empleado sincronizaEmpleado(Connection conn, EmpleadoService empleadoService, String numeroEmpleado) throws SQLException, FingerPrintException, ClassNotFoundException
+    public Empleado sincronizaEmpleado(Connection conn, EmpleadoService empleadoService, String numeroEmpleado) throws SQLException, FingerPrintException, ClassNotFoundException, IOException
     {
+        log.debug("Entrando a sincronizar 1 empleado");
         SGPEmpleadoResponse empleadoResponse;
         empleadoResponse = empleadoService.obtenerEmpleadoPorId(numeroEmpleado);
         empDAO.crearTabla(conn);
@@ -86,8 +89,9 @@ public class SincronizaEmpleadoBL
         return auxEmpleado;
     }
     
-    public void sincronizaEmpleadoSinHuellas(Connection conn, EmpleadoService empleadoService) throws SQLException, FingerPrintException, ClassNotFoundException
+    public void sincronizaEmpleadoSinHuellas(Connection conn, EmpleadoService empleadoService) throws SQLException, FingerPrintException, ClassNotFoundException, IOException
     {
+        log.debug("Entrando a sincronizar empleado sin huellas");
         List<SGPEmpleadoResponse> empleadoResponse = new ArrayList<SGPEmpleadoResponse>();
         empDAO.crearTabla(conn);
         List<Empleado> auxListaEmpleadoSinHuellas = empDAO.obtenerEmpleadoSinHuella(conn);
@@ -107,7 +111,7 @@ public class SincronizaEmpleadoBL
                 empDAO.actualizarElemento(conn, nuevoEmpleado);
             }else
             {
-                log.info("Empleado no entonctrado en SGP: {}", auxEmpleadoResponse);
+                log.debug("Empleado no encontrado en SGP: {}", auxEmpleadoResponse);
             }
         }
         

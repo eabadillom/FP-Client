@@ -70,14 +70,13 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             
             if(creacionTabla != 0)
             {
-                log.info("Tabla creada exitosamente!!!");
+                log.debug("Tabla creada exitosamente!!!");
             }else
             {
-                log.info("Tabla ya creada");
+                log.debug("Tabla ya creada");
             }
         }finally
         {
-            log.info("Cerrando Conexion");
             close(ps);
         }
     }
@@ -100,14 +99,13 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             
             if(creacionTabla != 0)
             {
-                log.info("Contenido de la tabla borrada exitosamente!!!");
+                log.debug("Contenido de la tabla borrada exitosamente!!!");
             }else
             {
-                log.info("Tabla ya limpia");
+                log.debug("Tabla ya limpia");
             }
         }finally
         {
-            log.info("Cerrando Conexion");
             close(ps);
         }
     }
@@ -143,12 +141,11 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             if(rs.next())
             {
                 model = getModel(rs);
-                log.info("Se obtuvo la asistencia satisfactoriamente");
+                log.debug("Se obtuvo la asistencia {} satisfactoriamente", model.getIdAsistencia());
             }
             
         } finally
         {
-            log.info("Cerrando Conexion");
             close(ps);
             close(rs);
         }
@@ -165,8 +162,12 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
         
         try
         {
-            if(fechaActual == null){
+            if(id == null){
                 throw new FingerPrintException("El id de asistencia no debe de ser un dato vacio.");
+            }
+            
+            if(fechaActual == null){
+                throw new FingerPrintException("La fecha de asistencia no debe de ser un dato vacio.");
             }
             
             buscarPorFecha = SELECT + "where numero_empleado = ? and cast(fecha_entrada as date) = ?";
@@ -182,13 +183,11 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             if(rs.next())
             {
                 model = getModel(rs);
-                log.info("Model: " + model);
-                log.info("Se obtuvo la asistencia satisfactoriamente");
+                log.debug("Se obtuvo la asistencia {} satisfactoriamente", model.getIdAsistencia());
             }
             
         } finally
         {
-            log.info("Cerrando Conexion");
             close(ps);
             close(rs);
         }
@@ -220,11 +219,10 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
                 model = getModel(rs);
                 listaModel.add(model);
             }
-            log.info("Se cargo la lista de asistencia satisfactoriamente");
+            log.debug("Se cargo la lista de asistencia satisfactoriamente");
             
         }finally
         {
-            log.info("Cerrando Conexion");
             close(ps);
             close(rs);
         }
@@ -259,7 +257,7 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
                 model = getModel(rs);
                 listaModel.add(model);
             }
-            log.info("Se cargo la lista de asistencia satisfactoriamente");
+            log.debug("Se cargo la lista de asistencia satisfactoriamente");
             
         }finally
         {
@@ -297,7 +295,7 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
                 model = getModel(rs);
                 listaModel.add(model);
             }
-            log.info("Se cargo la lista de asistencia satisfactoriamente");
+            log.debug("Se cargo la lista de asistencia satisfactoriamente");
             
         }finally
         {
@@ -332,14 +330,13 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             
             if(resultUpdate != 0)
             {
-                log.info("Se guardo el empleado satisfactoriamente");
+                log.debug("Se guardo el empleado satisfactoriamente {}", t.getIdAsistencia());
             }else{
                 log.error("No se guardo el empleado");
                 throw new FingerPrintException("Hubo un problema en la base de datos.");
             }
         }finally
         {
-            log.info("Cerrando Conexion");
             close(ps);
         }
     }
@@ -377,8 +374,7 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             resultUpdate = ps.executeUpdate();
             if(resultUpdate != 0)
             {
-                log.info("Se actualizo correctamente la asistencia!!!");
-                
+                log.debug("Se actualizo correctamente la asistencia {}!!!", t.getIdAsistencia());
             }else
             {
                 log.error("No se actualizo la asistencia");
@@ -386,7 +382,6 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             }
         }finally
         {
-            log.info("Cerrando Conexion");
             close(ps);
         }
     }
@@ -412,7 +407,7 @@ public class AsistenciaDAO extends DAO implements DAOInterface<Asistencia>
             
             if(resultDelete != 0)
             {
-                log.info("Se borro la asistencia satisfactoriamente!!!");
+                log.info("Se borro la asistencia {} satisfactoriamente!!!", t.getIdAsistencia() + " - " + t.getNumeroEmpleado());
             }else{
                 log.error("No se borro la asistencia");
                 throw new FingerPrintException("Hubo un problema en la base de datos.");

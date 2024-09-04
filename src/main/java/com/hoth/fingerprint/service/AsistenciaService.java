@@ -4,13 +4,13 @@
  */
 package com.hoth.fingerprint.service;
 
+import com.hoth.fingerprint.component.SGPProperties;
 import com.hoth.fingerprint.model.request.SGPAsistenciaRequest;
 import com.hoth.fingerprint.model.response.SGPAsistenciaResponse;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.logging.log4j.LogManager;
@@ -33,26 +33,26 @@ public class AsistenciaService
 {
     private static Logger log = LogManager.getLogger(AsistenciaService.class);
     private RestTemplate restTemplate;
-    private String url = "http://192.168.1.15:8080/sgp-api/fp-client";
-    private final String usuario = "PLANTA1";
-    private final String contrasenia = "abc123@";
 
     public AsistenciaService() 
     {
         this.restTemplate = new RestTemplate();
     }
     
-    public List<SGPAsistenciaResponse> enviarListaAsistencia(List<SGPAsistenciaRequest> asistenciaRequest)
+    public List<SGPAsistenciaResponse> enviarListaAsistencia(List<SGPAsistenciaRequest> asistenciaRequest) throws IOException
     {
+        SGPProperties propiedadesSGP = new SGPProperties();
+        log.debug("Entrando a la petición de enviar la asistencia a SGP");
         ZonedDateTime zonedDateTime = ZonedDateTime.now();
         zonedDateTime.withZoneSameLocal(ZoneId.of("UTC-6"));
-        String urlCompleta = this.url + "/empleado";
-        HttpHeaders headers = createHeaders(this.usuario, this.contrasenia);
+        String urlCompleta = propiedadesSGP.getUrl() + "/sgp-api/fp-client/empleado";
+        HttpHeaders headers = createHeaders(propiedadesSGP.getAppUser(), propiedadesSGP.getAppPassword());
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setDate(zonedDateTime);
-        
+        log.info("Construyendo la peticion de asistencia a SGP...");
         HttpEntity<List<SGPAsistenciaRequest>> entity = new HttpEntity<>(asistenciaRequest, headers);
         ParameterizedTypeReference typeReference = new ParameterizedTypeReference<List<SGPAsistenciaResponse>>() {};
+        log.debug("Haciendo la petición de envío de asistencias a SGP");
         ResponseEntity<List<SGPAsistenciaResponse>> response = restTemplate.exchange(urlCompleta, HttpMethod.POST, entity, typeReference);
         List<SGPAsistenciaResponse> listaAsistenciaResponse = response.getBody();
         return listaAsistenciaResponse;
