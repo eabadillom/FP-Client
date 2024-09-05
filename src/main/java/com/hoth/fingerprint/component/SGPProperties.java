@@ -20,6 +20,7 @@ public class SGPProperties
     private String appUser = null;
     private String appPassword = null;
     private String sgpTimeout = null;
+    private final int numeroEmpleado;
     
 
     public SGPProperties() throws IOException {
@@ -29,9 +30,10 @@ public class SGPProperties
         this.url = properties.getProperty("sgp.url");
         this.idFpClient = properties.getProperty("idFpClient");
         this.password = properties.getProperty("password");
-        this.appUser = properties.getProperty("app.user");
-        this.appPassword = properties.getProperty("app.password");
+        this.appUser = properties.getProperty("sgp.app.user");
+        this.appPassword = properties.getProperty("sgp.app.password");
         this.sgpTimeout = properties.getProperty("sgp.timeout");
+        this.numeroEmpleado = Integer.parseInt(properties.getProperty("sgp.empleado.numeroEmpleado"));
     }
     
     public String getUrl() {
@@ -58,25 +60,8 @@ public class SGPProperties
         return sgpTimeout;
     }
     
-    /*public String URL(String url) throws IOException
-    {
-        Properties properties = new Properties();
-        InputStream in = getClass().getResourceAsStream("/application.properties");
-        properties.load(in);
-        return properties.getProperty("sgp.url") + url;
+    public int getNumeroEmpleado() {
+        return numeroEmpleado;
     }
-    
-    public String[] usuarioContrasenia() throws IOException
-    {
-        String[] datos = null;
-        Properties properties = new Properties();
-        InputStream in = getClass().getResourceAsStream("/application.properties");
-        properties.load(in);
-        
-        datos[0] = properties.getProperty("idFpClientAPI");
-        datos[1] = properties.getProperty("password");
-        
-        return datos;
-    }*/
     
 }

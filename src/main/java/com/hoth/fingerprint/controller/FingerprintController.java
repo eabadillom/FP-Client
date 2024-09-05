@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.digitalpersona.uareu.*;
 import com.google.gson.Gson;
 import com.hoth.fingerprint.business.RegistroLocalBL;
+import com.hoth.fingerprint.component.SGPProperties;
 import com.hoth.fingerprint.gui.Capture;
 import com.hoth.fingerprint.gui.Enrollment;
 import com.hoth.fingerprint.model.response.ChallengeResponse;
@@ -47,6 +48,7 @@ public class FingerprintController {
     @PostMapping
     public ResponseEntity<BiometricResponse> validateFingerPrint(@RequestBody Peticion json) throws Exception {
         this.registros = new RegistroLocalBL();
+        SGPProperties propiedadesSGP = new SGPProperties();
         ResponseEntity<BiometricResponse> response = null;
         String accion = null;
         BiometricResponse biometric = null;
@@ -117,47 +119,54 @@ public class FingerprintController {
                     if (numeroEmpleado == null || numeroEmpleado.equals("")) {
                         throw new FPClientOperationException("Debe indicar un numero de empleado");
                     }
+                    
+                    if(numeroEmpleado.length() == propiedadesSGP.getNumeroEmpleado())
+                    {
+                        jsonChallengeResponse = connectionChallengeServlet(numeroEmpleado);
 
-                    jsonChallengeResponse = connectionChallengeServlet(numeroEmpleado);
+                        String validateHuella = jsonChallengeResponse.getHuella();
+                        log.trace("validateHuella {}", validateHuella);
+                        String validateHuella2 = jsonChallengeResponse.getHuella2();
+                        log.trace("validateHuella2 {}", validateHuella2);
+                        String huellaCapturada = json.getCaptura();
+                        log.trace("huellaCapturada {}", huellaCapturada);
 
-                    String validateHuella = jsonChallengeResponse.getHuella();
-                    log.trace("validateHuella {}", validateHuella);
-                    String validateHuella2 = jsonChallengeResponse.getHuella2();
-                    log.trace("validateHuella2 {}", validateHuella2);
-                    String huellaCapturada = json.getCaptura();
-                    log.trace("huellaCapturada {}", huellaCapturada);
+                        boolean match;
 
-                    boolean match;
+                        log.debug("Respuesta del challenge servlet: {}", jsonChallengeResponse);
+                        Integer codigoError = jsonChallengeResponse.getCodigoError();
 
-                    log.debug("Respuesta del challenge servlet: {}", jsonChallengeResponse);
-                    Integer codigoError = jsonChallengeResponse.getCodigoError();
+                        match = registros.comprobarHuella(validateHuella, validateHuella2, huellaCapturada);
+                        Connection conn = null;
+                        boolean registroEmpleadoCompletado = registros.registrarEmpleado(conn, numeroEmpleado, jsonChallengeResponse.getHuella(), jsonChallengeResponse.getHuella2());
+                        if (registroEmpleadoCompletado == true) {
+                            log.debug("Empleado registrado exitosamente!!!");
+                        } else {
+                            log.debug("Empleado ya registrado!!!");
+                        }
 
-                    match = registros.comprobarHuella(validateHuella, validateHuella2, huellaCapturada);
-                    Connection conn = null;
-                    boolean registroEmpleadoCompletado = registros.registrarEmpleado(conn, numeroEmpleado, jsonChallengeResponse.getHuella(), jsonChallengeResponse.getHuella2());
-                    if (registroEmpleadoCompletado == true) {
-                        log.debug("Empleado registrado exitosamente!!!");
-                    } else {
-                        log.debug("Empleado ya registrado!!!");
+                        log.trace("Valor de match .............. . . .: {}", match);
+
+                        biometric = new BiometricResponse();
+                        biometric.setName("Validar");
+                        biometric.setResult(918);
+                        biometric.setMessage("Huella validada");
+                        biometric.setBiometricData1(b64Biometrico);
+                        biometric.setVerifyBiometricData(match);
+
+                        if (match == true) {
+                            biometric.setToken(jsonChallengeResponse.getToken());
+                        } else {
+                            biometric.setToken(null);
+                        }
+                        response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
+
+                        break;
                     }
-
-                    log.trace("Valor de match .............. . . .: {}", match);
-
-                    biometric = new BiometricResponse();
-                    biometric.setName("Validar");
-                    biometric.setResult(918);
-                    biometric.setMessage("Huella validada");
-                    biometric.setBiometricData1(b64Biometrico);
-                    biometric.setVerifyBiometricData(match);
-
-                    if (match == true) {
-                        biometric.setToken(jsonChallengeResponse.getToken());
-                    } else {
-                        biometric.setToken(null);
+                    else
+                    {
+                        throw new FingerPrintException("Deben ser 4 digitos");
                     }
-                    response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
-
-                    break;
                 default:
                     log.info("ocurrio un error switch .......");
                     break;
@@ -170,17 +179,22 @@ public class FingerprintController {
             try {
                 String numeroEmpleado = json.getNumeroEmpleado();
                 String huellaCaptura = json.getCaptura();
-
-                Asistencia asistenciaMensaje = registros.registrarAsistencia(numeroEmpleado, huellaCaptura);
-                biometric = new BiometricResponse();
-                biometric.setLastCodeError(1);
-                biometric.setLastMessageError(ex.getMessage());
-                biometric.setNumero(asistenciaMensaje.getNumeroEmpleado());
-                biometric.setHoraEntrada(fechas.DateToOffsetDateTime(asistenciaMensaje.getFechaEntrada()));
-                if (asistenciaMensaje.getFechaSalida() != null) {
-                    biometric.setHoraSalida(fechas.DateToOffsetDateTime(asistenciaMensaje.getFechaSalida()));
+                if(numeroEmpleado.length() == propiedadesSGP.getNumeroEmpleado())
+                {
+                    Asistencia asistenciaMensaje = registros.registrarAsistencia(numeroEmpleado, huellaCaptura);
+                    biometric = new BiometricResponse();
+                    biometric.setLastCodeError(1);
+                    biometric.setLastMessageError(ex.getMessage());
+                    biometric.setNumero(asistenciaMensaje.getNumeroEmpleado());
+                    biometric.setHoraEntrada(fechas.DateToOffsetDateTime(asistenciaMensaje.getFechaEntrada()));
+                    if (asistenciaMensaje.getFechaSalida() != null) {
+                        biometric.setHoraSalida(fechas.DateToOffsetDateTime(asistenciaMensaje.getFechaSalida()));
+                    }
+                    response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);                       
+                }else
+                {
+                    throw new FingerPrintException("Deben ser 4 digitos");
                 }
-                response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
             } catch (FingerPrintException ex1) {
                 log.error("Problema encontrado en la asistencia!!!", ex1.getMessage());
                 throw new Exception("Hubo algun problema con la base de datos");
