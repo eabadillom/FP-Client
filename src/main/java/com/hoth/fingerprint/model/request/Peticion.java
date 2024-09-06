@@ -9,6 +9,8 @@ public class Peticion {
     private String captura;
 
     private String numeroEmpleado;
+    
+    private int captureTimeout;
 
     public String getNumeroEmpleado() {
         return numeroEmpleado;
@@ -42,9 +44,17 @@ public class Peticion {
         this.tpAccion = tpAccion;
     }
 
+    public int getCaptureTimeout() {
+        return captureTimeout;
+    }
+
+    public void setCaptureTimeout(int captureTimeout) {
+        this.captureTimeout = captureTimeout;
+    }
+    
     @Override
     public String toString() {
-        return "Peticion [tpAccion=" + tpAccion + ", enrolamiento=" + enrolamiento + ", captura=" + captura + "]";
+        return "Peticion [tpAccion=" + tpAccion + ", enrolamiento=" + enrolamiento + ", captura=" + captura + ", tiempo captura=" + captureTimeout + "]";
     }
 
 

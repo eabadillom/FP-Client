@@ -21,7 +21,7 @@ public class SGPProperties
     private String appPassword = null;
     private String sgpTimeout = null;
     private final int numeroEmpleado;
-    
+    private final int captureTimeout;
 
     public SGPProperties() throws IOException {
         Properties properties = new Properties();
@@ -32,8 +32,9 @@ public class SGPProperties
         this.password = properties.getProperty("password");
         this.appUser = properties.getProperty("sgp.app.user");
         this.appPassword = properties.getProperty("sgp.app.password");
-        this.sgpTimeout = properties.getProperty("sgp.timeout");
+        this.sgpTimeout = properties.getProperty("sgp.read.timeout");
         this.numeroEmpleado = Integer.parseInt(properties.getProperty("sgp.empleado.numeroEmpleado"));
+        this.captureTimeout = Integer.parseInt(properties.getProperty("sgp.capture.timeout"));
     }
     
     public String getUrl() {
@@ -62,6 +63,10 @@ public class SGPProperties
     
     public int getNumeroEmpleado() {
         return numeroEmpleado;
+    }
+
+    public int getCaptureTimeout() {
+        return captureTimeout;
     }
     
 }

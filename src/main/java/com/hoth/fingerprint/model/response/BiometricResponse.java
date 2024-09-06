@@ -98,5 +98,5 @@ public class BiometricResponse {
     public void setHoraSalida(OffsetDateTime horaSalida) {
         this.horaSalida = horaSalida;
     }
-	
+    
 }

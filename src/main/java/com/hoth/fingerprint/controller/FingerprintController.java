@@ -53,7 +53,7 @@ public class FingerprintController {
         String accion = null;
         BiometricResponse biometric = null;
         ChallengeResponse jsonChallengeResponse = null;
-
+        
         // ----- Biometricos ----- 
         Reader.CaptureResult captura = null;
         byte[] biometrico = null;
@@ -88,34 +88,45 @@ public class FingerprintController {
                     break;
 
                 case "Capture":
+                    try{
+                        log.info("Capturando biometrico...");
+                        if(json.getCaptureTimeout() > 0)
+                        {
+                            Capture.Run(json.getCaptureTimeout());
+                        }else
+                        {
+                            Capture.Run(propiedadesSGP.getCaptureTimeout()*1000);
+                        }
+                    
+                        captura = Capture.getCaptura();
 
-                    log.info("Capturando biometrico...");
-                    Capture.Run();
-                    captura = Capture.getCaptura();
+                        Engine engine = UareUGlobal.GetEngine();
+                        fmd = engine.CreateFmd(captura.image, Fmd.Format.ANSI_378_2004);
+                        log.trace("fmd capture: {}", fmd);
 
-                    Engine engine = UareUGlobal.GetEngine();
-                    fmd = engine.CreateFmd(captura.image, Fmd.Format.ANSI_378_2004);
-                    log.trace("fmd capture: {}", fmd);
+                        biometrico = fmd.getData();
+                        b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
+                        log.trace("Captura de fmd convertida: {}", b64Biometrico);
+                        log.trace("Status captura {}", captura.quality);
 
-                    biometrico = fmd.getData();
-                    b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
-                    log.trace("Captura de fmd convertida: {}", b64Biometrico);
-                    log.trace("Status captura {}", captura.quality);
-
-                    biometric = new BiometricResponse();
-                    biometric.setName("Captura");
-                    biometric.setResult(918);
-                    biometric.setMessage("Huella capturada");
-                    biometric.setBiometricData1(b64Biometrico);
-                    biometric.setVerifyBiometricData(true);
-                    response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
-                    log.debug("Terminando captura de biometrico.");
+                        biometric = new BiometricResponse();
+                        biometric.setName("Captura");
+                        biometric.setResult(918);
+                        biometric.setMessage("Huella capturada");
+                        biometric.setBiometricData1(b64Biometrico);
+                        biometric.setVerifyBiometricData(true);
+                        response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
+                        log.debug("Terminando captura de biometrico.");
+                    }catch(NullPointerException | UareUException ex)
+                    {
+                        throw new NullPointerException("Biometrico no capturado...");
+                    }
                     break;
-
+                    
                 case "Validate":
 
                     String numeroEmpleado = json.getNumeroEmpleado();
-
+                    
                     if (numeroEmpleado == null || numeroEmpleado.equals("")) {
                         throw new FPClientOperationException("Debe indicar un numero de empleado");
                     }
@@ -199,8 +210,8 @@ public class FingerprintController {
                 log.error("Problema encontrado en la asistencia!!!", ex1.getMessage());
                 throw new Exception("Hubo algun problema con la base de datos");
             }
-        } catch (NegativeArraySizeException ex) {
-            log.error("Problema al comparar biometricos... {}", ex.toString());
+        } catch (NullPointerException | NegativeArraySizeException ex) {
+            log.error("Problema al comparar biometricos... ", ex);
             biometric = new BiometricResponse();
             biometric.setLastCodeError(1);
             biometric.setLastMessageError("Ocurrio un problema con la comparacion de huella, por favor avisa a tu "
@@ -244,7 +255,7 @@ public class FingerprintController {
             urlSGP = properties.getProperty("sgp.url");
             idFpClient = properties.getProperty("idFpClient");
             password = properties.getProperty("password");
-            timeout = Integer.valueOf(properties.getProperty("sgp.timeout"));
+            timeout = Integer.valueOf(properties.getProperty("sgp.read.timeout"));
 
             log.debug("ESTE ES EL NUMERO DE EMPLEADO {}", numeroEmp);
 
