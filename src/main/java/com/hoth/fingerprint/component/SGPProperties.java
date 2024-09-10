@@ -20,7 +20,8 @@ public class SGPProperties
     private String appUser = null;
     private String appPassword = null;
     private String sgpTimeout = null;
-    
+    private final int numeroEmpleado;
+    private final int captureTimeout;
 
     public SGPProperties() throws IOException {
         Properties properties = new Properties();
@@ -29,9 +30,11 @@ public class SGPProperties
         this.url = properties.getProperty("sgp.url");
         this.idFpClient = properties.getProperty("idFpClient");
         this.password = properties.getProperty("password");
-        this.appUser = properties.getProperty("app.user");
-        this.appPassword = properties.getProperty("app.password");
-        this.sgpTimeout = properties.getProperty("sgp.timeout");
+        this.appUser = properties.getProperty("sgp.app.user");
+        this.appPassword = properties.getProperty("sgp.app.password");
+        this.sgpTimeout = properties.getProperty("sgp.read.timeout");
+        this.numeroEmpleado = Integer.parseInt(properties.getProperty("sgp.empleado.numeroEmpleado"));
+        this.captureTimeout = Integer.parseInt(properties.getProperty("sgp.capture.timeout"));
     }
     
     public String getUrl() {
@@ -58,25 +61,12 @@ public class SGPProperties
         return sgpTimeout;
     }
     
-    /*public String URL(String url) throws IOException
-    {
-        Properties properties = new Properties();
-        InputStream in = getClass().getResourceAsStream("/application.properties");
-        properties.load(in);
-        return properties.getProperty("sgp.url") + url;
+    public int getNumeroEmpleado() {
+        return numeroEmpleado;
     }
-    
-    public String[] usuarioContrasenia() throws IOException
-    {
-        String[] datos = null;
-        Properties properties = new Properties();
-        InputStream in = getClass().getResourceAsStream("/application.properties");
-        properties.load(in);
-        
-        datos[0] = properties.getProperty("idFpClientAPI");
-        datos[1] = properties.getProperty("password");
-        
-        return datos;
-    }*/
+
+    public int getCaptureTimeout() {
+        return captureTimeout;
+    }
     
 }

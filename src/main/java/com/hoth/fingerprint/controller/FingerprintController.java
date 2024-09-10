@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.digitalpersona.uareu.*;
 import com.google.gson.Gson;
 import com.hoth.fingerprint.business.RegistroLocalBL;
+import com.hoth.fingerprint.component.SGPProperties;
 import com.hoth.fingerprint.gui.Capture;
 import com.hoth.fingerprint.gui.Enrollment;
 import com.hoth.fingerprint.model.response.ChallengeResponse;
@@ -47,11 +48,12 @@ public class FingerprintController {
     @PostMapping
     public ResponseEntity<BiometricResponse> validateFingerPrint(@RequestBody Peticion json) throws Exception {
         this.registros = new RegistroLocalBL();
+        SGPProperties propiedadesSGP = new SGPProperties();
         ResponseEntity<BiometricResponse> response = null;
         String accion = null;
         BiometricResponse biometric = null;
         ChallengeResponse jsonChallengeResponse = null;
-
+        
         // ----- Biometricos ----- 
         Reader.CaptureResult captura = null;
         byte[] biometrico = null;
@@ -86,78 +88,96 @@ public class FingerprintController {
                     break;
 
                 case "Capture":
+                    try{
+                        log.info("Capturando biometrico...");
+                        if(json.getCaptureTimeout() > 0)
+                        {
+                            Capture.Run(json.getCaptureTimeout());
+                        }else
+                        {
+                            Capture.Run(propiedadesSGP.getCaptureTimeout()*1000);
+                        }
+                    
+                        captura = Capture.getCaptura();
 
-                    log.info("Capturando biometrico...");
-                    Capture.Run();
-                    captura = Capture.getCaptura();
+                        Engine engine = UareUGlobal.GetEngine();
+                        fmd = engine.CreateFmd(captura.image, Fmd.Format.ANSI_378_2004);
+                        log.trace("fmd capture: {}", fmd);
 
-                    Engine engine = UareUGlobal.GetEngine();
-                    fmd = engine.CreateFmd(captura.image, Fmd.Format.ANSI_378_2004);
-                    log.trace("fmd capture: {}", fmd);
+                        biometrico = fmd.getData();
+                        b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
+                        log.trace("Captura de fmd convertida: {}", b64Biometrico);
+                        log.trace("Status captura {}", captura.quality);
 
-                    biometrico = fmd.getData();
-                    b64Biometrico = new String(Base64.getEncoder().encode(biometrico));
-                    log.trace("Captura de fmd convertida: {}", b64Biometrico);
-                    log.trace("Status captura {}", captura.quality);
-
-                    biometric = new BiometricResponse();
-                    biometric.setName("Captura");
-                    biometric.setResult(918);
-                    biometric.setMessage("Huella capturada");
-                    biometric.setBiometricData1(b64Biometrico);
-                    biometric.setVerifyBiometricData(true);
-                    response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
-                    log.debug("Terminando captura de biometrico.");
+                        biometric = new BiometricResponse();
+                        biometric.setName("Captura");
+                        biometric.setResult(918);
+                        biometric.setMessage("Huella capturada");
+                        biometric.setBiometricData1(b64Biometrico);
+                        biometric.setVerifyBiometricData(true);
+                        response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
+                        log.debug("Terminando captura de biometrico.");
+                    }catch(NullPointerException | UareUException ex)
+                    {
+                        throw new NullPointerException("Biometrico no capturado...");
+                    }
                     break;
-
+                    
                 case "Validate":
 
                     String numeroEmpleado = json.getNumeroEmpleado();
-
+                    
                     if (numeroEmpleado == null || numeroEmpleado.equals("")) {
                         throw new FPClientOperationException("Debe indicar un numero de empleado");
                     }
+                    
+                    if(numeroEmpleado.length() == propiedadesSGP.getNumeroEmpleado())
+                    {
+                        jsonChallengeResponse = connectionChallengeServlet(numeroEmpleado);
 
-                    jsonChallengeResponse = connectionChallengeServlet(numeroEmpleado);
+                        String validateHuella = jsonChallengeResponse.getHuella();
+                        log.trace("validateHuella {}", validateHuella);
+                        String validateHuella2 = jsonChallengeResponse.getHuella2();
+                        log.trace("validateHuella2 {}", validateHuella2);
+                        String huellaCapturada = json.getCaptura();
+                        log.trace("huellaCapturada {}", huellaCapturada);
 
-                    String validateHuella = jsonChallengeResponse.getHuella();
-                    log.trace("validateHuella {}", validateHuella);
-                    String validateHuella2 = jsonChallengeResponse.getHuella2();
-                    log.trace("validateHuella2 {}", validateHuella2);
-                    String huellaCapturada = json.getCaptura();
-                    log.trace("huellaCapturada {}", huellaCapturada);
+                        boolean match;
 
-                    boolean match;
+                        log.debug("Respuesta del challenge servlet: {}", jsonChallengeResponse);
+                        Integer codigoError = jsonChallengeResponse.getCodigoError();
 
-                    log.debug("Respuesta del challenge servlet: {}", jsonChallengeResponse);
-                    Integer codigoError = jsonChallengeResponse.getCodigoError();
+                        match = registros.comprobarHuella(validateHuella, validateHuella2, huellaCapturada);
+                        Connection conn = null;
+                        boolean registroEmpleadoCompletado = registros.registrarEmpleado(conn, numeroEmpleado, jsonChallengeResponse.getHuella(), jsonChallengeResponse.getHuella2());
+                        if (registroEmpleadoCompletado == true) {
+                            log.debug("Empleado registrado exitosamente!!!");
+                        } else {
+                            log.debug("Empleado ya registrado!!!");
+                        }
 
-                    match = registros.comprobarHuella(validateHuella, validateHuella2, huellaCapturada);
-                    Connection conn = null;
-                    boolean registroEmpleadoCompletado = registros.registrarEmpleado(conn, numeroEmpleado, jsonChallengeResponse.getHuella(), jsonChallengeResponse.getHuella2());
-                    if (registroEmpleadoCompletado == true) {
-                        log.debug("Empleado registrado exitosamente!!!");
-                    } else {
-                        log.debug("Empleado ya registrado!!!");
+                        log.trace("Valor de match .............. . . .: {}", match);
+
+                        biometric = new BiometricResponse();
+                        biometric.setName("Validar");
+                        biometric.setResult(918);
+                        biometric.setMessage("Huella validada");
+                        biometric.setBiometricData1(b64Biometrico);
+                        biometric.setVerifyBiometricData(match);
+
+                        if (match == true) {
+                            biometric.setToken(jsonChallengeResponse.getToken());
+                        } else {
+                            biometric.setToken(null);
+                        }
+                        response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
+
+                        break;
                     }
-
-                    log.trace("Valor de match .............. . . .: {}", match);
-
-                    biometric = new BiometricResponse();
-                    biometric.setName("Validar");
-                    biometric.setResult(918);
-                    biometric.setMessage("Huella validada");
-                    biometric.setBiometricData1(b64Biometrico);
-                    biometric.setVerifyBiometricData(match);
-
-                    if (match == true) {
-                        biometric.setToken(jsonChallengeResponse.getToken());
-                    } else {
-                        biometric.setToken(null);
+                    else
+                    {
+                        throw new FingerPrintException("Deben ser 4 digitos");
                     }
-                    response = new ResponseEntity<BiometricResponse>(biometric, HttpStatus.OK);
-
-                    break;
                 default:
                     log.info("ocurrio un error switch .......");
                     break;
@@ -170,23 +190,28 @@ public class FingerprintController {
             try {
                 String numeroEmpleado = json.getNumeroEmpleado();
                 String huellaCaptura = json.getCaptura();
-
-                Asistencia asistenciaMensaje = registros.registrarAsistencia(numeroEmpleado, huellaCaptura);
-                biometric = new BiometricResponse();
-                biometric.setLastCodeError(1);
-                biometric.setLastMessageError(ex.getMessage());
-                biometric.setNumero(asistenciaMensaje.getNumeroEmpleado());
-                biometric.setHoraEntrada(fechas.DateToOffsetDateTime(asistenciaMensaje.getFechaEntrada()));
-                if (asistenciaMensaje.getFechaSalida() != null) {
-                    biometric.setHoraSalida(fechas.DateToOffsetDateTime(asistenciaMensaje.getFechaSalida()));
+                if(numeroEmpleado.length() == propiedadesSGP.getNumeroEmpleado())
+                {
+                    Asistencia asistenciaMensaje = registros.registrarAsistencia(numeroEmpleado, huellaCaptura);
+                    biometric = new BiometricResponse();
+                    biometric.setLastCodeError(1);
+                    biometric.setLastMessageError(ex.getMessage());
+                    biometric.setNumero(asistenciaMensaje.getNumeroEmpleado());
+                    biometric.setHoraEntrada(fechas.DateToOffsetDateTime(asistenciaMensaje.getFechaEntrada()));
+                    if (asistenciaMensaje.getFechaSalida() != null) {
+                        biometric.setHoraSalida(fechas.DateToOffsetDateTime(asistenciaMensaje.getFechaSalida()));
+                    }
+                    response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);                       
+                }else
+                {
+                    throw new FingerPrintException("Deben ser 4 digitos");
                 }
-                response = new ResponseEntity<>(biometric, HttpStatus.FORBIDDEN);
             } catch (FingerPrintException ex1) {
                 log.error("Problema encontrado en la asistencia!!!", ex1.getMessage());
                 throw new Exception("Hubo algun problema con la base de datos");
             }
-        } catch (NegativeArraySizeException ex) {
-            log.error("Problema al comparar biometricos... {}", ex.toString());
+        } catch (NullPointerException | NegativeArraySizeException ex) {
+            log.error("Problema al comparar biometricos... ", ex);
             biometric = new BiometricResponse();
             biometric.setLastCodeError(1);
             biometric.setLastMessageError("Ocurrio un problema con la comparacion de huella, por favor avisa a tu "
@@ -230,7 +255,7 @@ public class FingerprintController {
             urlSGP = properties.getProperty("sgp.url");
             idFpClient = properties.getProperty("idFpClient");
             password = properties.getProperty("password");
-            timeout = Integer.valueOf(properties.getProperty("sgp.timeout"));
+            timeout = Integer.valueOf(properties.getProperty("sgp.read.timeout"));
 
             log.debug("ESTE ES EL NUMERO DE EMPLEADO {}", numeroEmp);
 
