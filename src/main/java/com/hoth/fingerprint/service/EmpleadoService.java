@@ -11,6 +11,7 @@ import java.nio.charset.Charset;
 import java.util.List;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hoth.fingerprint.component.SGPProperties;
+import com.hoth.fingerprint.exceptions.FPClientComunicationException;
 import java.io.IOException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.logging.log4j.LogManager;
@@ -23,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -41,7 +43,7 @@ public class EmpleadoService
         this.restTemplate = new RestTemplate();
     }
     
-    public SGPEmpleadoResponse obtenerEmpleadoPorId(String numeroEmpleado) throws IOException
+    public SGPEmpleadoResponse obtenerEmpleadoPorId(String numeroEmpleado) throws FPClientComunicationException, IOException
     {
         SGPProperties propiedadesSGP = new SGPProperties();
         log.debug("Entrando a la petición de obtener empleado por id a SGP");
@@ -67,6 +69,9 @@ public class EmpleadoService
             {
                 log.error("Empleado no encontrado: {}", jsonException);
             }
+        }catch(ResourceAccessException ex)
+        {
+            throw new FPClientComunicationException("Hay un problema con la comunicación");
         }
         return empleadoResponse;
     }

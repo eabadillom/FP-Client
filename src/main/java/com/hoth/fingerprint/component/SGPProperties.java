@@ -15,21 +15,18 @@ import java.util.Properties;
 public class SGPProperties 
 {
     private String url = null;
-    private String idFpClient = null;
-    private String password = null;
     private String appUser = null;
     private String appPassword = null;
     private String sgpTimeout = null;
     private final int numeroEmpleado;
     private final int captureTimeout;
 
-    public SGPProperties() throws IOException {
+    public SGPProperties() throws IOException 
+    {
         Properties properties = new Properties();
         InputStream in = getClass().getResourceAsStream("/application.properties");
         properties.load(in);
         this.url = properties.getProperty("sgp.url");
-        this.idFpClient = properties.getProperty("idFpClient");
-        this.password = properties.getProperty("password");
         this.appUser = properties.getProperty("sgp.app.user");
         this.appPassword = properties.getProperty("sgp.app.password");
         this.sgpTimeout = properties.getProperty("sgp.read.timeout");
@@ -39,14 +36,6 @@ public class SGPProperties
     
     public String getUrl() {
         return url;
-    }
-
-    public String getIdFpClient() {
-        return idFpClient;
-    }
-
-    public String getPassword() {
-        return password;
     }
     
     public String getAppUser() {

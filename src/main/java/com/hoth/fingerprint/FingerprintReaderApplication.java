@@ -10,8 +10,6 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -74,5 +72,5 @@ public class FingerprintReaderApplication extends JFrame {
                 .addComponent(arg[0])
         );
     }
-
+    
 }

@@ -13,6 +13,7 @@ import java.util.Objects;
  */
 public class SGPEmpleadoResponse extends SGPEmpleadoRequest
 {
+    private String token;
     private Integer codigoError = null;
     private String mensajeError = null;
 
@@ -20,6 +21,14 @@ public class SGPEmpleadoResponse extends SGPEmpleadoRequest
         super();
     }
 
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+    
     public Integer getCodigoError() {
         return codigoError;
     }
@@ -60,7 +69,8 @@ public class SGPEmpleadoResponse extends SGPEmpleadoRequest
 
     @Override
     public String toString() {
-        return "SincronizacionEmpleadoResponse{" + "codigoError=" + codigoError + ", mensajeError=" + mensajeError + '}';
+        return "SincronizacionEmpleadoResponse[" + "Numero: " + super.getBiometrico1() + ", Biometrico 1: " + super.getBiometrico1() +
+                ", Biometrico 2: " + super.getBiometrico2() + ", Token: " + token + ", Codigo Error: " + codigoError + ", Mensaje Error: " + mensajeError + ']';
     }
     
     
