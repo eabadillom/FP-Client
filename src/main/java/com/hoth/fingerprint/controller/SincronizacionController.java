@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.hoth.fingerprint.business.SincronizaAsistenciaBL;
 import com.hoth.fingerprint.business.SincronizaEmpleadoBL;
 import com.hoth.fingerprint.dao.DAO;
+import com.hoth.fingerprint.exceptions.FPClientComunicationException;
 import com.hoth.fingerprint.exceptions.FingerPrintException;
 import com.hoth.fingerprint.model.domain.Asistencia;
 import com.hoth.fingerprint.model.domain.Empleado;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  *
@@ -49,7 +51,7 @@ public class SincronizacionController extends DAO
     }
     
     @GetMapping("/empleado/{numeroEmpleado}")
-    public ResponseEntity<Empleado> sincronizarEmpleado(@PathVariable String numeroEmpleado)
+    public ResponseEntity<Empleado> sincronizarEmpleado(@PathVariable String numeroEmpleado) throws FPClientComunicationException
     {
         log.info("Iniciando sincronizacion de un empleado con numero de empleado a SGP...");
         ResponseEntity<Empleado> response = null;
@@ -63,8 +65,11 @@ public class SincronizacionController extends DAO
         }catch(SQLException | ClassNotFoundException | IOException  ex)
         {
             log.error("Error al guardar la informacion a la base de datos ",ex);
-        }
-        catch(FingerPrintException ex)
+        }catch (ResourceAccessException ex) 
+        {
+            log.error("Error al comunicarse con SGP ",ex);
+            throw new FPClientComunicationException(", se sincronizara el registro de tu asistencia...");
+        }catch(FingerPrintException ex)
         {
             response = new ResponseEntity<>(empBuscado, HttpStatus.FORBIDDEN);
             log.error("Error al traer la informacion en la sincronizacion ",ex);
@@ -77,7 +82,7 @@ public class SincronizacionController extends DAO
     }
     
     @GetMapping("/empleado")
-    public ResponseEntity<List<Empleado>> sincronizarTodosEmpleados() 
+    public ResponseEntity<List<Empleado>> sincronizarTodosEmpleados() throws FPClientComunicationException 
     {
         log.info("Iniciando sincronizacion de todos los empleados a SGP...");
         ResponseEntity<List<Empleado>> response = null;
@@ -91,8 +96,11 @@ public class SincronizacionController extends DAO
         }catch(SQLException | ClassNotFoundException | IOException  ex)
         {
             log.error("Error al guardar la informacion a la base de datos ",ex);
-        }
-        catch(FingerPrintException ex)
+        }catch (ResourceAccessException ex) 
+        {
+            log.error("Error al comunicarse con SGP ",ex);
+            throw new FPClientComunicationException(", se sincronizara el registro de tu asistencia...");
+        }catch(FingerPrintException ex)
         {
             response = new ResponseEntity<>(empBuscado, HttpStatus.FORBIDDEN);
             log.error("Error al traer la informacion en la sincronizacion ",ex);

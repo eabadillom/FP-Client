@@ -100,12 +100,12 @@ public class RegistroLocalBL
             Verification.Run(fmd_s);
             exitoso = Verification.isFinger_M();
             return exitoso;
-        }catch(NegativeArraySizeException ex)
+        }catch(NullPointerException | NegativeArraySizeException ex)
         {
             log.error("Hubo un error en la comparacion de las huellas!!! ", ex);
             return false;
         }
-
+        
         
     }
 

@@ -159,14 +159,14 @@ public class Capture extends JPanel implements ActionListener {
 
                     captura = evt.capture_result;
 
-                } /*else if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
+                } else if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
                     //capture or streaming was canceled, just quit
                     bCanceled = true;
                     log.debug("cancelado {}", bCanceled);
                 } else {
                     //bad quality
                     log.debug(evt.capture_result.quality);
-                }*/
+                }
             }else if (null != evt.exception) {
                 //exception during capture
                 log.error("Capture", evt.exception);
@@ -209,11 +209,13 @@ public class Capture extends JPanel implements ActionListener {
             m_dlgParent.setAlwaysOnTop(true);
             m_dlgParent.pack();
             m_dlgParent.setLocationRelativeTo(null);
-            m_dlgParent.setSize(400, 550);
+            m_dlgParent.setSize(400, 550); //Tamaño original del dialog
+            //m_dlgParent.setSize(10, 10);
             m_dlgParent.toFront();
             m_dlgParent.dispose();
+            m_dlgParent.setDefaultCloseOperation(dlgParent.HIDE_ON_CLOSE);
             m_dlgParent.setVisible(true);
-
+            
             //cancel capture
             StopCaptureThread();
 
@@ -233,11 +235,11 @@ public class Capture extends JPanel implements ActionListener {
         if (m_reader != null) {
             try {
                 m_reader.CancelCapture();
-                m_reader.Close();
+                //m_reader.Close();
                 m_dlgParent.setVisible(false);
                 log.info("Captura detenida");
             } catch (UareUException e) {
-                log.error("Error al detener la captura: ", e);
+                log.error("Error al tratar de detener la captura: {}", e.getCode());
             }
         }
         if (scheduler != null && !scheduler.isShutdown()) {
