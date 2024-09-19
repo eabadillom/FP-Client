@@ -28,6 +28,12 @@ import com.hoth.fingerprint.service.EmpleadoService;
 import com.hoth.fingerprint.tools.DateUtils;
 import java.io.IOException;
 import java.sql.Connection;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.springframework.web.client.ResourceAccessException;
 
 @RestController
@@ -138,7 +144,7 @@ public class FingerprintController {
                         log.trace("huellaCapturada {}", huellaCapturada);
 
                         boolean match = registros.comprobarHuella(validateHuella, validateHuella2, huellaCapturada);
-                        log.info("Valor de match .............. . . .: {}", match);
+                        log.trace("Valor de match .............. . . .: {}", match);
                         if(false == match)
                         {
                             throw new FingerPrintException("Biometricos no coinciden");

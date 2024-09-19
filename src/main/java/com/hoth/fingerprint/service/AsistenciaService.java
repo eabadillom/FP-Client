@@ -55,6 +55,7 @@ public class AsistenciaService
         log.debug("Haciendo la petición de envío de asistencias a SGP");
         ResponseEntity<List<SGPAsistenciaResponse>> response = restTemplate.exchange(urlCompleta, HttpMethod.POST, entity, typeReference);
         List<SGPAsistenciaResponse> listaAsistenciaResponse = response.getBody();
+        log.info("Recibiendo información de la lista de asistencia de SGP");
         return listaAsistenciaResponse;
     }
     
