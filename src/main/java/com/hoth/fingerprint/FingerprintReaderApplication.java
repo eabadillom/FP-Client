@@ -3,14 +3,13 @@ package com.hoth.fingerprint;
 import java.awt.Container;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
+import java.util.TimeZone;
 
 import javax.swing.GroupLayout;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -25,6 +24,7 @@ public class FingerprintReaderApplication extends JFrame {
 
 
 	public static void main(String[] args) {
+            TimeZone.setDefault(TimeZone.getTimeZone("GMT-6"));
 		//SpringApplication.run(FingerprintReaderApplication.class, args);
 		ConfigurableApplicationContext ctx = new SpringApplicationBuilder(FingerprintReaderApplication.class)
 				.headless(false).web(WebApplicationType.SERVLET).run(args);
@@ -72,5 +72,5 @@ public class FingerprintReaderApplication extends JFrame {
                 .addComponent(arg[0])
         );
     }
-
+    
 }
