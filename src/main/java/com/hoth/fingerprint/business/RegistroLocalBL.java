@@ -105,8 +105,6 @@ public class RegistroLocalBL
             log.error("Hubo un error en la comparacion de las huellas!!! ", ex);
             return false;
         }
-        
-        
     }
 
     public boolean registrarEmpleado(Connection conn, String numeroEmpleado, String huella1, String huella2) throws FingerPrintException
@@ -141,99 +139,89 @@ public class RegistroLocalBL
 
         return resultado;
     } 
-
+    
     public Asistencia registrarAsistencia(String numeroEmpleado, String captura) throws FingerPrintException
     {
-        Connection conn = null;
-        log.debug("Entrado al metodo de registrar asistencia");
-        UUID uuidAux;
+        log.info("Entrando al método registrar asistencia local");
         Date fecha = fechaUtils.obtenerFechaSistema();
-        Date fechaNueva = fechaUtils.LocalDate(fecha);
-        Asistencia asistenciaEnvio = new Asistencia();
+        Asistencia asistenciaEnvio = null;
+        Connection conn = null;
         try
         {
             conn = Conexion.dsConexion();
-            this.empDAO.crearTabla(conn);
-            this.asistenciaDAO.crearTabla(conn);
+            empDAO.crearTabla(conn);
+            asistenciaDAO.crearTabla(conn);
 
-            Empleado emp = this.empDAO.obtenerDato(conn, numeroEmpleado);
-
-            if(emp != null)
+            Empleado empleado = empDAO.obtenerDato(conn, numeroEmpleado);
+            if (empleado == null) 
             {
-                if(emp.getB1() != null && emp.getB2() != null)
-                {
-                    boolean exitoso = comprobarHuella(emp.getB1(), emp.getB2(), captura);
-                    if(exitoso == true)
-                    {
-                        Asistencia asistenciaVer = asistenciaDAO.obtenerDatoPorFecha(conn, emp.getNumeroEmpleado(), fechaNueva);
-                        if(asistenciaVer != null)
-                        {
-                            log.debug("Actualizando registro de asistencia!!!");
-                            uuidAux = asistenciaVer.getIdAsistencia();
-                            asistenciaActualizarElemento(conn, emp, fecha, null, uuidAux);
-                            asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
-                            asistenciaEnvio.setFechaEntrada(asistenciaVer.getFechaEntrada());
-                            asistenciaEnvio.setFechaSalida(fecha);
-                            return asistenciaEnvio;
-                        }else
-                        {
-                            log.debug("Guardando registro de asistencia!!!");
-                            asistenciaGuardarElemento(conn, emp, fecha, null);
-                            asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
-                            asistenciaEnvio.setFechaEntrada(fecha);
-                            asistenciaEnvio.setFechaSalida(null);
-                            return asistenciaEnvio;
-                        }
-                    }else
-                    {
-                        log.error("Comparacion no exitosa del empleado {}", emp.getNumeroEmpleado());
-                        throw new FingerPrintException("Problemas al realizar la validacion!!!");
-                    }
-                }else
-                {
-                    Asistencia asistenciaVer = asistenciaDAO.obtenerDatoPorFecha(conn, emp.getNumeroEmpleado(), fechaNueva);
-                    if(asistenciaVer != null)
-                    {
-                        log.debug("Actualizando registro de asistencia!!!");
-                        uuidAux = asistenciaVer.getIdAsistencia();
-                        asistenciaActualizarElemento(conn, emp, fecha, captura, uuidAux);
-                        asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
-                        asistenciaEnvio.setFechaEntrada(asistenciaVer.getFechaEntrada());
-                        asistenciaEnvio.setFechaSalida(fecha);
-                        return asistenciaEnvio;
-                    }else
-                    {
-                        log.debug("Guardando registro de asistencia!!!");
-                        asistenciaGuardarElemento(conn, emp, fecha, captura);
-                        asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
-                        asistenciaEnvio.setFechaEntrada(fecha);
-                        asistenciaEnvio.setFechaSalida(null);
-                        return asistenciaEnvio;
-                    }
-                }
-            }else
-            {
-                Empleado empNuevo = new Empleado();
-                empNuevo.setNumeroEmpleado(numeroEmpleado);
-                empNuevo.setB1(null);
-                empNuevo.setB2(null);
-                this.empDAO.guardarElemento(conn, empNuevo);
-                asistenciaGuardarElemento(conn, empNuevo, fecha, captura);
-                asistenciaEnvio.setNumeroEmpleado(numeroEmpleado);
-                asistenciaEnvio.setFechaEntrada(fecha);
-                asistenciaEnvio.setFechaSalida(null);
-                asistenciaEnvio.setB1(null);
+                asistenciaEnvio = registrarNuevoEmpleado(conn, numeroEmpleado, captura, fecha);
+                log.info("Guardando un nuevo empleado {} con asistencia", numeroEmpleado);
                 return asistenciaEnvio;
             }
 
-        }catch(FingerPrintException | ClassNotFoundException | SQLException ex)
-        {
-            log.error("Hubo un problema al registrar la asistencia ", ex.getMessage());
+            if (empleado.getB1() != null && empleado.getB2() != null) 
+            {
+                if (!comprobarHuella(empleado.getB1(), empleado.getB2(), captura)) 
+                {
+                    log.error("Comparación no exitosa del empleado {}", empleado.getNumeroEmpleado());
+                    throw new FingerPrintException("Problemas al realizar la validación!!!");
+                }
+                asistenciaEnvio = actualizarORegistrarAsistencia(conn, empleado, fecha, null);
+                return asistenciaEnvio;
+            }
+
+            asistenciaEnvio = actualizarORegistrarAsistencia(conn, empleado, fecha, captura);
+            return asistenciaEnvio;
+        }
+        catch (FingerPrintException | ClassNotFoundException | SQLException ex) {
+            log.error("Hubo un problema al registrar la asistencia: {}", ex.getMessage());
             throw new FingerPrintException("Problema al guardar la asistencia");
-        }finally
-        {
+        } finally {
             close(conn);
         }
+    }
+    
+    private Asistencia registrarNuevoEmpleado(Connection conn, String numeroEmpleado, String captura, Date fecha) throws FingerPrintException, ClassNotFoundException, SQLException 
+    {
+        Empleado nuevoEmpleado = new Empleado();
+        nuevoEmpleado.setNumeroEmpleado(numeroEmpleado);
+        nuevoEmpleado.setB1(null);
+        nuevoEmpleado.setB2(null);
+        empDAO.guardarElemento(conn, nuevoEmpleado);
+
+        asistenciaGuardarElemento(conn, nuevoEmpleado, fecha, captura);
+        log.debug("Nuevo empleado registrado con asistencia");
+
+        Asistencia asistencia = new Asistencia();
+        asistencia.setNumeroEmpleado(numeroEmpleado);
+        asistencia.setFechaEntrada(fecha);
+        asistencia.setFechaSalida(null);
+        asistencia.setB1(null);
+        return asistencia;
+    }
+    
+    private Asistencia actualizarORegistrarAsistencia(Connection conn, Empleado empleado, Date fecha, String captura) throws FingerPrintException, ClassNotFoundException, SQLException 
+    {
+        Date fechaNueva = fechaUtils.LocalDate(fecha);
+        Asistencia asistenciaExistente = asistenciaDAO.obtenerDatoPorFecha(conn, empleado.getNumeroEmpleado(), fechaNueva);
+        Asistencia asistencia = new Asistencia();
+        asistencia.setNumeroEmpleado(empleado.getNumeroEmpleado());
+        
+        if (asistenciaExistente != null) 
+        {
+            log.info("Actualizando registro de asistencia del empleado {}", empleado.getNumeroEmpleado());
+            asistenciaActualizarElemento(conn, empleado, fecha, captura, asistenciaExistente.getIdAsistencia());
+            asistencia.setFechaEntrada(asistenciaExistente.getFechaEntrada());
+            asistencia.setFechaSalida(fecha);
+        } else 
+        {
+            log.info("Guardando nuevo registro de asistencia del empleado {}", empleado.getNumeroEmpleado());
+            asistenciaGuardarElemento(conn, empleado, fecha, captura);
+            asistencia.setFechaEntrada(fecha);
+            asistencia.setFechaSalida(null);
+        }
+        return asistencia;
     }
     
     public void asistenciaGuardarElemento(Connection conn, Empleado emp, Date fecha, String captura) throws FingerPrintException

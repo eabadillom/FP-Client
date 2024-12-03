@@ -55,7 +55,7 @@ public class EmpleadoService
             entity = new HttpEntity<String>(createHeaders(propiedadesSGP.getAppUser(), propiedadesSGP.getAppPassword()));
             response = restTemplate.exchange(urlCompleta, HttpMethod.GET, entity, SGPEmpleadoResponse.class);
             empleadoResponse = response.getBody();
-            log.debug("Recibiendo informacion de SGP");
+            log.info("Recibiendo información de 1 empleado de SGP");
         }catch(HttpClientErrorException.NotFound ex)
         {
             String error = ex.getResponseBodyAsString();
@@ -90,7 +90,7 @@ public class EmpleadoService
         
         //listaEmpleadoResponse = Arrays.asList(response.getBody());
         listaEmpleadoResponse = response.getBody();
-        log.debug("Recibiendo informacion de SGP");
+        log.info("Recibiendo información de la lista de empleado de SGP");
         return listaEmpleadoResponse;
     }
     
