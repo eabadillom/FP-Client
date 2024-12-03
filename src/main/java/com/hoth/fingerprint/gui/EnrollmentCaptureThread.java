@@ -9,8 +9,6 @@ import org.apache.logging.log4j.Logger;
 import com.digitalpersona.uareu.Fid;
 import com.digitalpersona.uareu.Reader;
 import com.digitalpersona.uareu.UareUException;
-import com.digitalpersona.uareu.Reader.CaptureResult;
-import com.digitalpersona.uareu.Reader.Priority;
 
 public class EnrollmentCaptureThread extends Thread {
 
@@ -77,146 +75,190 @@ public class EnrollmentCaptureThread extends Thread {
 
     public void Capture() 
     {
+        boolean bLectorListo = false;
         try 
         {
             //wait for reader to become ready
-            boolean bReady = false;
-            while (!bReady && !m_bCancel) {
-                log.info("Estado del lector: {}", m_reader.GetStatus());
-                Reader.Status rs = m_reader.GetStatus();
-                if (Reader.ReaderStatus.BUSY == rs.status) {
+            bLectorListo = estadoEnEspera(bLectorListo);
+            
+            if(m_bCancel)
+            {
+                Reader.CaptureResult cr = new Reader.CaptureResult();
+                cr.quality = Reader.CaptureQuality.CANCELED;
+                NotifyListener(ACT_CAPTURE, cr, null, null);
+                log.info("Captura cancelada.....");
+            }
+            
+            estadoEnListo(bLectorListo);
+            
+        } catch (UareUException e) 
+        {
+            NotifyListener(ACT_CAPTURE, null, null, e);
+        }catch (InterruptedException ie) 
+        {
+            log.error("El hilo fue interrumpido: {}", ie.getMessage());
+            Thread.currentThread().interrupt(); // Mantén el estado de interrupción del hilo
+        }
+    }
+    
+    private void estadoEnListo(boolean bLectorListo) throws UareUException
+    {
+        if (bLectorListo == false) 
+        {
+            return;
+        }
+        
+        //capture
+        log.info("Iniciando captura de huella para enrolamiento");
+        log.trace("Format: {}", m_format);
+        log.trace("Proceso de imagen: {}", m_proc);
+        log.trace("Lector: {}", m_reader.GetStatus());//colocar condiciones para el estatus del lector se traba
+        log.trace("Resolucion {}", m_reader.GetCapabilities().resolutions[0]);
+
+        int resolution = m_reader.GetCapabilities().resolutions != null && m_reader.GetCapabilities().resolutions.length > 0
+            ? m_reader.GetCapabilities().resolutions[0]
+            : -1;
+
+        if (resolution == -1) 
+        {
+            log.error("No hay resoluciones disponibles en el lector.");
+            return;
+        }
+
+        estadoActualLector(resolution);
+
+        log.info("Huella capturada....");
+        //log.info("valor de la huella detectada {}",cr);
+    }
+    
+    private void estadoActualLector(int resolucionImagen) throws UareUException 
+    {
+        try 
+        {
+            //Reader.ReaderStatus status = m_reader.GetStatus();
+            log.trace("Estado actual del lector: {}", m_reader.GetStatus().status);
+
+            if(Reader.ReaderStatus.READY != m_reader.GetStatus().status) 
+            {
+                log.warn("Lector no está listo. Estado actual: {}", m_reader.GetStatus().status);
+                Thread.sleep(1000); // Pausa breve para evitar el consumo excesivo de recursos
+            }
+
+            if(Reader.ReaderStatus.READY == m_reader.GetStatus().status)
+            {
+                log.debug("Entre a capturar huellas");
+                Reader.CaptureResult cr = null;
+
+                log.trace("Info de resolucion: {}", resolucionImagen);
+
+                cr = m_reader.Capture(m_format, m_proc, resolucionImagen, -1); //error no funciona correctamente el lector o metodo del lector
+                log.trace("Captura exitosa: {}", cr.quality);
+
+                NotifyListener(ACT_CAPTURE, cr, null, null);
+            }
+
+        }catch (UareUException e) 
+        {
+            m_reader.Reset();
+            log.error("Mala captura de huella registrada {}", e.getMessage());
+        }catch (InterruptedException ie) 
+        {
+            log.error("El hilo fue interrumpido: {}", ie.getMessage());
+            Thread.currentThread().interrupt(); // Mantén el estado de interrupción del hilo
+        }
+    }
+    
+    private boolean estadoEnEspera(boolean bLectorListo) throws UareUException, InterruptedException
+    {
+        while (!bLectorListo && !m_bCancel) 
+        {
+            log.info("Estado del lector: {}", m_reader.GetStatus());
+            Reader.Status rs = m_reader.GetStatus();
+            
+            if (rs.status == null) 
+            {
+                //reader failure
+                NotifyListener(ACT_CAPTURE, null, rs, null);
+                log.info("Captura fallida...");
+                break;
+            } 
+            
+            switch (rs.status) 
+            {
+                case BUSY:
                     //if busy, wait a bit
-                    try {
-                        Thread.sleep(100);
-                        log.info("Se duerme hilo por 1 segundo");
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        break;
-                    }
-                } else if (Reader.ReaderStatus.READY == rs.status || Reader.ReaderStatus.NEED_CALIBRATION == rs.status) {
-                    //ready for capture
-                    bReady = true;
-                    log.info("Inicia lector");
+                    Thread.sleep(1000);
+                    log.info("Se duerme hilo por 1 segundo");
                     break;
-                } else {
+                case READY:
+                case NEED_CALIBRATION:
+                    //ready for capture
+                    log.info("Inicia lector");
+                    return true;
+                default:
                     //reader failure
                     NotifyListener(ACT_CAPTURE, null, rs, null);
                     log.info("Captura fallida...");
                     break;
-                }
             }
-            if (m_bCancel) {
-                Reader.CaptureResult cr = new Reader.CaptureResult();
-                cr.quality = Reader.CaptureQuality.CANCELED;
-                NotifyListener(ACT_CAPTURE, cr, null, null);
-                log.info("Vaptura cancelada.....");
-            }
-
-            if (bReady) {
-                //capture
-                log.info("Iniciando captura de huella para enrolamiento");
-                log.trace("Format: {}", m_format);
-                log.trace("Proceso de imagen: {}", m_proc);
-                log.trace("Lector: {}", m_reader.GetStatus());//colocar condiciones para el estatus del lector se traba
-                log.trace("Resolucion {}", m_reader.GetCapabilities().resolutions[0]);
-                
-                boolean estado = false;
-
-                while(!estado)
-                {
-                    try 
-                    {
-                        //Reader.ReaderStatus status = m_reader.GetStatus();
-                        log.info("Estado actual del lector: {}", m_reader.GetStatus().status);
-                        if(Reader.ReaderStatus.READY == m_reader.GetStatus().status)
-                        {
-                            log.debug("Entre a capturar huellas");
-                            Reader.CaptureResult cr = null;
-                            try 
-                            {
-                                //El notify cacha el error 										
-                                log.info(cr);
-
-                                int resolution = m_reader.GetCapabilities().resolutions != null && m_reader.GetCapabilities().resolutions.length > 0
-                                    ? m_reader.GetCapabilities().resolutions[0]
-                                    : -1;
-
-                                if (resolution == -1) {
-                                    log.error("No hay resoluciones disponibles en el lector.");
-                                    return;
-                                }
-
-                                log.info("Info de resolucion: {}", resolution);
-
-                                cr = m_reader.Capture(m_format, m_proc, resolution, -1); //error no funciona correctamente el lector o metodo del lector
-                                log.info("Captura exitosa: {}", cr.quality);
-
-                                NotifyListener(ACT_CAPTURE, cr, null, null);
-                                break;
-                            } catch (UareUException e) {
-                                    m_reader.Reset();
-                                    log.info("Mala captura de huella registrada {}", e.getMessage());
-                            }
-                        } else 
-                        {
-                            log.warn("Lector no está listo. Estado actual: {}", m_reader.GetStatus().status);
-                            Thread.sleep(1000); // Pausa breve para evitar el consumo excesivo de recursos
-                        }
-                    }catch (InterruptedException ie) {
-                        log.error("El hilo fue interrumpido: {}", ie.getMessage());
-                        Thread.currentThread().interrupt(); // Mantén el estado de interrupción del hilo
-                        break;
-                    }
-                }
-                /*try {
-					Thread.sleep(2000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}*/
-                log.info("Huella capturada....");
-                //log.info("valor de la huella detectada {}",cr);
-
-            }
-        } catch (UareUException e) {
-            NotifyListener(ACT_CAPTURE, null, null, e);
         }
-
+        return false;
     }
 
-    private void Stream() {
-        try {
-            //wait for reader to become ready
-            boolean bReady = false;
-            while (!bReady && !m_bCancel) {
-                Reader.Status rs = m_reader.GetStatus();
-                if (Reader.ReaderStatus.BUSY == rs.status) {
-                    //if busy, wait a bit
-                    try {
-                        Thread.sleep(100);
-                        log.info("Hilo durmiendo por 1 s...");
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        break;
-                    }
-                } else if (Reader.ReaderStatus.READY == rs.status || Reader.ReaderStatus.NEED_CALIBRATION == rs.status) {
-                    //ready for capture
-                    bReady = true;
-                    log.info("Comparacion satisfactoria del status de la lectura de huella");
-                    break;
-                } else {
+    private void Stream() 
+    {
+        try 
+        {
+            Reader.Status rs = m_reader.GetStatus();
+            boolean bLectorListo = false;
+            
+            while (!bLectorListo && !m_bCancel) 
+            {
+                if (null == rs.status) 
+                {
                     //reader failure
                     NotifyListener(ACT_CAPTURE, null, rs, null);
                     log.info("Comparacion fallida");
                     break;
+                } 
+                
+                switch (rs.status) 
+                {
+                    case BUSY:
+                        //if busy, wait a bit
+                        Thread.sleep(1000);
+                        log.info("Hilo durmiendo por 1 s..."); 
+                        break;
+                    case READY:
+                    case NEED_CALIBRATION:
+                        //ready for capture
+                        bLectorListo = true;
+                        log.info("Comparacion satisfactoria del status de la lectura de huella");
+                        break;
+                    default:
+                        //reader failure
+                        NotifyListener(ACT_CAPTURE, null, rs, null);
+                        log.info("Comparacion fallida");
+                        break;
                 }
             }
-
-            if (bReady) {
+            
+            if (m_bCancel) 
+            {
+                Reader.CaptureResult cr = new Reader.CaptureResult();
+                cr.quality = Reader.CaptureQuality.CANCELED;
+                NotifyListener(ACT_CAPTURE, cr, null, null);
+                log.info("Captura cancelada.....");
+            }
+            
+            if (bLectorListo) 
+            {
                 //start streaming
                 m_reader.StartStreaming();
                 log.info("Lectura de huella en curso");
                 //get images
-                while (!m_bCancel) {
+                while (!m_bCancel) 
+                {
                     Reader.CaptureResult cr = m_reader.GetStreamImage(m_format, m_proc, m_reader.GetCapabilities().resolutions[0]);
                     NotifyListener(ACT_CAPTURE, cr, null, null);
                     log.info("Lectura exitosa");
@@ -226,16 +268,14 @@ public class EnrollmentCaptureThread extends Thread {
                 m_reader.StopStreaming();
                 log.info("Lectura de huella detenida....");
             }
-        } catch (UareUException e) {
+        } catch (UareUException e) 
+        {
             NotifyListener(ACT_CAPTURE, null, null, e);
+        }catch (InterruptedException e) 
+        {
+            log.error("Error en la interrupcion de thread {}", e.getMessage());
         }
-
-        if (m_bCancel) {
-            Reader.CaptureResult cr = new Reader.CaptureResult();
-            cr.quality = Reader.CaptureQuality.CANCELED;
-            NotifyListener(ACT_CAPTURE, cr, null, null);
-
-        }
+        
     }
 
     private void NotifyListener(String action, Reader.CaptureResult cr, Reader.Status st, UareUException ex) {
@@ -250,6 +290,7 @@ public class EnrollmentCaptureThread extends Thread {
 
         //invoke listener on EDT thread
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 m_listener.actionPerformed(evt);
 
@@ -268,6 +309,7 @@ public class EnrollmentCaptureThread extends Thread {
         }
     }
 
+    @Override
     public void run() {
         if (m_bStream) {
             Stream();

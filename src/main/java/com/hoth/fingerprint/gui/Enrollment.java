@@ -98,12 +98,14 @@ public class Enrollment extends JPanel implements ActionListener
             m_listener = listener;
         }
 
-        public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) {
-            log.info("Levante el lector ....................");
+        public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) 
+        {
+            log.trace("Levante el lector ....................");
 
             Engine.PreEnrollmentFmd prefmd = null;
 
-            while (null == prefmd && !m_bCancel) {
+            while (null == prefmd && !m_bCancel) 
+            {
                 // start capture thread
                 m_capture = new EnrollmentCaptureThread(m_reader, false, Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT);
                 m_capture.start(null);  //Desata el evento de captura para las 4 huellas (diferentes momentos)
@@ -116,46 +118,56 @@ public class Enrollment extends JPanel implements ActionListener
 
                 // check result
                 EnrollmentCaptureThread.CaptureEvent evt = m_capture.getLastCaptureEvent();
-                log.info("evento {}", evt.getActionCommand());
-                if (null != evt.capture_result) {
-                    log.info("La captura es diferente de null");
-                    if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
-                        // captura cancelada, retorna nulo
-                        break;
-                    } else if (null != evt.capture_result.image
-                            && Reader.CaptureQuality.GOOD == evt.capture_result.quality) {
-                        // acquire engine
-                        Engine engine = UareUGlobal.GetEngine();
-                        try {
-                            // extract features
-                            Fmd fmd = engine.CreateFmd(evt.capture_result.image, Fmd.Format.ANSI_378_2004);
-
-                            // return prefmd
-                            prefmd = new Engine.PreEnrollmentFmd();
-                            prefmd.fmd = fmd;
-                            prefmd.view_index = 0;
-
-                            // send sucess
-                            SendToListener(ACT_FEACTURES, null, null, null, null);
-                            log.info("Entre al metodo getFmd");
-
-                        } catch (UareUException e) {
-                            // send extraction error
-                            SendToListener(ACT_FEACTURES, null, null, null, e);
-                        }
-
-                    } else {
-                        // send quiality result
-                        SendToListener(ACT_CAPTURE, null, evt.capture_result, evt.reader_status, evt.exception);
-                    }
-                } else {
+                log.trace("evento {}", evt.getActionCommand());
+                
+                if (null == evt.capture_result)
+                {
                     // send capture error
-                    log.info("evento ev fue null");
+                    log.trace("evento ev fue null");
                     SendToListener(ACT_CAPTURE, null, evt.capture_result, evt.reader_status, evt.exception);
+                    break;
                 }
-            }
+                
+                if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) 
+                {
+                    // captura cancelada, retorna nulo
+                    log.info("La captura fue cancelada");
+                    break;
+                }
+                
+                if (null == evt.capture_result.image && Reader.CaptureQuality.GOOD != evt.capture_result.quality)
+                {
+                    // send quiality result
+                    log.info("La imagen es null o la calidad no es GOOD");
+                    SendToListener(ACT_CAPTURE, null, evt.capture_result, evt.reader_status, evt.exception);
+                    break;
+                }
+                
+                if (null != evt.capture_result.image && Reader.CaptureQuality.GOOD == evt.capture_result.quality) 
+                {
+                    // acquire engine
+                    Engine engine = UareUGlobal.GetEngine();
+                    try {
+                        // extract features
+                        Fmd fmd = engine.CreateFmd(evt.capture_result.image, Fmd.Format.ANSI_378_2004);
 
-            log.info("Sali del metodo getFMD para ir al actionperformand");
+                        // return prefmd
+                        prefmd = new Engine.PreEnrollmentFmd();
+                        prefmd.fmd = fmd;
+                        prefmd.view_index = 0;
+
+                        // send sucess
+                        SendToListener(ACT_FEACTURES, null, null, null, null);
+                        log.trace("Se extrajo el FMD correctamente");
+                    } catch (UareUException e) {
+                        // send extraction error
+                        log.error("Error al extraer FMD", e);
+                        SendToListener(ACT_FEACTURES, null, null, null, e);
+                    }
+                }
+                
+            }
+            log.trace("Sali del metodo getFMD para ir al actionperformand");
 
             return prefmd;
         }
@@ -174,6 +186,7 @@ public class Enrollment extends JPanel implements ActionListener
             // invoke listener on EDT thread
             try {
                 javax.swing.SwingUtilities.invokeAndWait(new Runnable() {
+                    @Override
                     public void run() {
                         m_listener.actionPerformed(evt);
                     }
@@ -183,6 +196,7 @@ public class Enrollment extends JPanel implements ActionListener
             }
         }
 
+        @Override
         public void run() {
             // acquire engine
             Engine engine = UareUGlobal.GetEngine();
@@ -193,13 +207,15 @@ public class Enrollment extends JPanel implements ActionListener
                     // run enrolmnet
                     log.info("Entre al metodo Run para crear el template");
                     Fmd fmd = engine.CreateEnrollmentFmd(Fmd.Format.ANSI_378_2004, this); //llama al metodo GetFmd (en teoria lo debe de llamar 4 veces para hacer el template)
-                    log.info("Entre a evaluar si el fmd esta lleno o vacio en el run para template");
+                    log.trace("Entre a evaluar si el fmd esta lleno o vacio en el run para template");
                     // enviar resultado
                     //entra a evaluar pero debe de cancelar o cambiar valor de m_bCancel
-                    if (null != fmd) {
+                    if(null != fmd) {
                         SendToListener(ACT_DONE, fmd, null, null, null);
                         break;//se añadio break
-                    } else {
+                    }
+                    
+                    if(null == fmd){
                         SendToListener(ACT_CANCELED, null, null, null, null);
                         break;
                     }
@@ -226,8 +242,8 @@ public class Enrollment extends JPanel implements ActionListener
         try {
             m_Collection = UareUGlobal.GetReaderCollection();
             m_Collection.GetReaders();
-            log.info("Tamaño Mcollection enrollment: {}", m_Collection.size());
-            log.info("Nombre del lector enrollment es: {}", m_Collection.get(0).GetDescription().name);
+            log.trace("Tamaño Mcollection enrollment: {}", m_Collection.size());
+            log.trace("Nombre del lector enrollment es: {}", m_Collection.get(0).GetDescription().name);
 
             m_reader = m_Collection.get(0);
 
@@ -259,85 +275,122 @@ public class Enrollment extends JPanel implements ActionListener
         btnBack.addActionListener(this);
         add(btnBack);
         add(Box.createVerticalStrut(vgap));
-        log.info("valor de m_bJustStarted {}", m_bJustStarted);
+        log.trace("valor de m_bJustStarted {}", m_bJustStarted);
         setOpaque(true);
     }
 
-    public void actionPerformed(ActionEvent e) {
-
+    @Override
+    public void actionPerformed(ActionEvent e) 
+    {
         log.info("Entrada para enrolamiento valor m_bJustStarted {}", m_bJustStarted);
 
-        if (e.getActionCommand().equals("back")) {
-
+        if (e.getActionCommand().equals("back")) 
+        {
             m_dlgParent.setVisible(false);
-
         } else {
             EnrollmentThread.EnrollmentEvent evt = (EnrollmentThread.EnrollmentEvent) e;
 
-            if (e.getActionCommand().equals(EnrollmentThread.ACT_PROMPT)) {
-                log.info("Entre a la accion ACT_PROMPT...................");
-                if (m_bJustStarted) {
-                    m_text.append("Registro preparado \n\n");
-                    m_text.append("Coloca tu dedo en el lector \n");
-                } else {
-                    m_text.append("Coloca el mismo dedo en el lector \n");
-                }
-                m_bJustStarted = false;
-            } else if (e.getActionCommand().equals(EnrollmentThread.ACT_CAPTURE)) {
-                if (null != evt.capture_result) {
-                    MessageBox.BadQuality(evt.capture_result.quality);
-
-                } else if (null != evt.exception) {
-                    MessageBox.DpError(evt.exception.getMessage(), evt.exception); //error 21
-                    log.info(evt.exception.getStackTrace());
-                } else if (null != evt.reader_status) {
-                    MessageBox.BadStatus(evt.reader_status);
-                }
-                m_bJustStarted = false;
-            } else if (e.getActionCommand().equals(EnrollmentThread.ACT_FEACTURES)) {
-                log.info("Entre a la accion ACT_FEACTURES...................");
-                if (null == evt.exception) {
-                    m_text.append("Huella capturada, características extraidas \n\n");
-
-                } else {
-                    MessageBox.DpError("Enrollment extraction", evt.exception);
-                    //JOptionPane.showMessageDialog(f, "WARNING");
-                }
-                m_bJustStarted = false;
-            } else if (e.getActionCommand().equals(EnrollmentThread.ACT_DONE)) {
-                if (null == evt.exception) {
-                    String str = String.format("Plantilla creada, tamaño: %d \n\n\n",
-                            evt.enrollment_fmd.getData().length);
-                    log.info("Huella capturada: {}", evt.enrollment_fmd.getData());
-                    m_text.append(str);
-                    try {
-                        fmd = evt.enrollment_fmd;
-                        biometrico = evt.enrollment_fmd.getData();
-                        //m_enrollment.cancel();
-                        m_reader.Close();
-
-                        //m_dlgParent.setVisible(false);
-                    } catch (UareUException e1) {
-                        e1.printStackTrace();
-                     }
-                } else {
-                    MessageBox.DpError("Enrollment template creation", evt.exception);
-                    //JOptionPane.showMessageDialog(f, "Error H");
-                }
-                m_bJustStarted = true;
-            } else if (e.getActionCommand().equals(EnrollmentThread.ACT_CANCELED)) {
-                // canceled, destroy dialog
-                m_dlgParent.setVisible(false);
+            switch (e.getActionCommand()) 
+            {
+                case EnrollmentThread.ACT_PROMPT:
+                    EnrollmentEventPrompt();
+                    break;
+                case EnrollmentThread.ACT_CAPTURE:
+                    EnrollmentEventCaptura(evt);
+                    break;
+                case EnrollmentThread.ACT_FEACTURES:
+                    EnrollmentEventFeature(evt);
+                    break;
+                case EnrollmentThread.ACT_DONE:
+                    EnrollmentEventDone(evt);
+                    break;
+                case EnrollmentThread.ACT_CANCELED:
+                    // canceled, destroy dialog
+                    m_dlgParent.setVisible(false);
+                    break;
+                default:
+                    break;
             }
 
             // cancel enrollment if any exception or bad reader status
             if (null != evt.exception) {
                 m_dlgParent.setVisible(false);
-            } else if (null != evt.reader_status && Reader.ReaderStatus.READY != evt.reader_status.status
+            } 
+            
+            if (null != evt.reader_status && Reader.ReaderStatus.READY != evt.reader_status.status
                     && Reader.ReaderStatus.NEED_CALIBRATION != evt.reader_status.status) {
                 m_dlgParent.setVisible(false);
             }
         }
+    }
+    
+    private void EnrollmentEventPrompt()
+    {
+        log.info("Entre a la accion ACT_PROMPT...................");
+        if (m_bJustStarted) {
+            m_text.append("Registro preparado \n\n");
+            m_text.append("Coloca tu dedo en el lector \n");
+        } else {
+            m_text.append("Coloca el mismo dedo en el lector \n");
+        }   m_bJustStarted = false;
+    }
+    
+    private void EnrollmentEventCaptura(EnrollmentThread.EnrollmentEvent evt)
+    {
+        if (null != evt.capture_result) 
+        {
+            MessageBox.BadQuality(evt.capture_result.quality);    
+        } 
+
+        if (null != evt.exception) 
+        {
+            MessageBox.DpError(evt.exception.getMessage(), evt.exception); //error 21
+            log.info(evt.exception.getStackTrace());
+        } 
+
+        if (null != evt.reader_status) 
+        {
+            MessageBox.BadStatus(evt.reader_status);
+        }   m_bJustStarted = false;
+    }
+    
+    private void EnrollmentEventFeature(EnrollmentThread.EnrollmentEvent evt)
+    {
+        log.info("Entre a la accion ACT_FEACTURES...................");
+        if (null == evt.exception) {
+            m_text.append("Huella capturada, características extraidas \n\n");
+        }
+
+        if(null != evt.exception){
+            MessageBox.DpError("Enrollment extraction", evt.exception);
+            //JOptionPane.showMessageDialog(f, "WARNING");
+        }   m_bJustStarted = false;
+    }
+    
+    private void EnrollmentEventDone(EnrollmentThread.EnrollmentEvent evt)
+    {
+        if (null == evt.exception) {
+            String str = String.format("Plantilla creada, tamaño: %d \n\n\n",
+                    evt.enrollment_fmd.getData().length);
+            log.info("Huella capturada: {}", evt.enrollment_fmd.getData());
+            m_text.append(str);
+            try {
+                fmd = evt.enrollment_fmd;
+                biometrico = evt.enrollment_fmd.getData();
+                //m_enrollment.cancel();
+                m_reader.Close();
+
+                //m_dlgParent.setVisible(false);
+            } catch (UareUException e1) {
+                e1.printStackTrace();
+            }
+        }
+
+        if(null != evt.exception){
+            MessageBox.DpError("Enrollment template creation", evt.exception);
+            //JOptionPane.showMessageDialog(f, "Error H");
+        }   
+        m_bJustStarted = true;
     }
 
     /*private void StopCaptureThread(){
@@ -401,7 +454,7 @@ public class Enrollment extends JPanel implements ActionListener
     
     public static void Run() {
         log.info("Entre a metodo run de Enrollment");
-        JDialog dlg = new JDialog((JDialog) null, "Enrollment", true);
+        JDialog dlg = new JDialog((JDialog) null, "Registro", true);
         log.info("Entrada a enroll: ");
         Enrollment enrollment = new Enrollment();
         enrollment.doModal(dlg);

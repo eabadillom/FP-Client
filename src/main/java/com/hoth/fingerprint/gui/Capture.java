@@ -30,7 +30,8 @@ public class Capture extends JPanel implements ActionListener {
 
     ReaderCollection m_Collection;
     Reader reader;
-
+    public static Reader.CaptureResult captura;
+    
     private JDialog m_dlgParent;
     private CaptureThread m_capture;
     private Reader m_reader;
@@ -49,8 +50,6 @@ public class Capture extends JPanel implements ActionListener {
         this.tiempoCaptura = tiempoCaptura;
     }
     
-    public static Reader.CaptureResult captura;
-
     public static Reader.CaptureResult getCaptura() {
         return captura;
     }
@@ -59,16 +58,15 @@ public class Capture extends JPanel implements ActionListener {
         Capture.captura = captura;
     }
 
-    Capture() {
-
-        try {
+    Capture() 
+    {
+        try 
+        {
             m_Collection = UareUGlobal.GetReaderCollection();
             m_Collection.GetReaders();
             log.trace("Tamaño Mcollection: {}", m_Collection.size());
             log.debug("Nombre del lector es: {}", m_Collection.get(0).GetDescription().name);
-
             m_reader = m_Collection.get(0);
-
         } catch (UareUException e) {
             log.error("UareUGlobal.getReaderCollection() {}", e);
             return;
@@ -105,14 +103,15 @@ public class Capture extends JPanel implements ActionListener {
 
     private void StartCaptureThread(JDialog dlg) {
         JLabel labelstart = new JLabel();
-        if (m_capture != null) {
-            try {
-                m_capture = new CaptureThread(m_reader, m_bStreaming, Fid.Format.ANSI_381_2004,
-                        Reader.ImageProcessing.IMG_PROC_DEFAULT);
+        if (m_capture != null) 
+        {
+            try 
+            {
+                m_capture = new CaptureThread(m_reader, m_bStreaming, Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT);
                 m_capture.start(this, dlg);
                 labelstart.setText("Escanea tu huella.......");
-
-            } catch (Exception e) {
+            } catch (Exception e) 
+            {
                 labelstart.setText("La huella no fue capturada");
             }
         }
@@ -134,44 +133,59 @@ public class Capture extends JPanel implements ActionListener {
         return rc;
     }
 
+    @Override
     public void actionPerformed(ActionEvent e) {
         log.trace("Entra a actionPerformed...");
         if (e.getActionCommand().equals(CaptureThread.ACT_CAPTURE)) {
             //event from capture thread
             CaptureThread.CaptureEvent evt = (CaptureThread.CaptureEvent) e;
             boolean bCanceled = false;
+            
+            if(evt.capture_result == null)
+            {
+                log.error("Error en el evt.capture_result");
+                return;
+            }
+            
+            boolean bGoodImage = false;
+            
+            if(evt.capture_result.image == null)
+            {
+                log.error("Error en el evt.capture_result.image");
+                return;
+            }
+            
+            if (m_bStreaming && (Reader.CaptureQuality.GOOD == evt.capture_result.quality || Reader.CaptureQuality.NO_FINGER == evt.capture_result.quality)) {
+                bGoodImage = true;
+            }
+            if (!m_bStreaming && Reader.CaptureQuality.GOOD == evt.capture_result.quality) {
+                bGoodImage = true;
+            }
+            
+            if (bGoodImage) {
+                //display image
+                m_image.showImage(evt.capture_result.image);
+                log.debug("imagen capturada.....");
 
-            if (null != evt.capture_result) {
-                boolean bGoodImage = false;
-                if (null != evt.capture_result.image) {
-                    if (m_bStreaming && (Reader.CaptureQuality.GOOD == evt.capture_result.quality || Reader.CaptureQuality.NO_FINGER == evt.capture_result.quality)) {
-                        bGoodImage = true;
-                    }
-                    if (!m_bStreaming && Reader.CaptureQuality.GOOD == evt.capture_result.quality) {
-                        bGoodImage = true;
-                    }
-                }
-                if (bGoodImage) {
-                    //display image
-
-                    m_image.showImage(evt.capture_result.image);
-                    log.debug("imagen capturada.....");
-
-                    captura = evt.capture_result;
-
-                } else if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
-                    //capture or streaming was canceled, just quit
-                    bCanceled = true;
-                    log.debug("cancelado {}", bCanceled);
-                } else {
-                    //bad quality
-                    log.debug(evt.capture_result.quality);
-                }
-            }else if (null != evt.exception) {
+                captura = evt.capture_result;
+            }
+            
+            if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
+                //capture or streaming was canceled, just quit
+                bCanceled = true;
+                log.debug("cancelado {}", bCanceled);
+            } else {
+                //bad quality
+                log.debug(evt.capture_result.quality);
+            }
+            
+            if (null != evt.exception) {
                 //exception during capture
                 log.error("Capture", evt.exception);
                 bCanceled = true;
-            } else if (null != evt.reader_status) {
+            }
+            
+            if (null != evt.reader_status) {
                 log.debug(evt.reader_status);
                 bCanceled = true;
             }
@@ -191,7 +205,7 @@ public class Capture extends JPanel implements ActionListener {
             //check if streaming supported
             Reader.Capabilities rc = m_reader.GetCapabilities();
             if (null != rc && !rc.can_stream) {
-                log.info("This reader does not support streaming");
+                log.info("El lector de huella no admite el streaming");
                 bOk = false;
             }
         }

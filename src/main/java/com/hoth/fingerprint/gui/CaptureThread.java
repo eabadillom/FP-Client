@@ -86,24 +86,30 @@ public class CaptureThread extends Thread {
             while (!bReady && !m_bCancel) {
                 log.debug("Estado del lector: {}", m_reader.GetStatus());
                 Reader.Status rs = m_reader.GetStatus();
+                
+                if (rs.status == null)
+                {
+                    //reader failure
+                    NotifyListener(ACT_CAPTURE, null, rs, null);
+                    log.info("Captura fallida...");
+                    break;
+                }
+                
                 if (Reader.ReaderStatus.BUSY == rs.status) {
                     //if busy, wait a bit
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(1000);
                         log.info("Se duerme hilo por 1 segundo");
                     } catch (InterruptedException e) {
                         log.error("Error el hilo: {}", e.getMessage());
                         break;
                     }
-                } else if (Reader.ReaderStatus.READY == rs.status || Reader.ReaderStatus.NEED_CALIBRATION == rs.status) {
+                } 
+                
+                if (Reader.ReaderStatus.READY == rs.status || Reader.ReaderStatus.NEED_CALIBRATION == rs.status) {
                     //ready for capture
                     bReady = true;
                     log.info("Inicia lector de huella");
-                    break;
-                } else {
-                    //reader failure
-                    NotifyListener(ACT_CAPTURE, null, rs, null);
-                    log.info("Captura fallida...");
                     break;
                 }
             }
@@ -155,24 +161,29 @@ public class CaptureThread extends Thread {
             boolean bReady = false;
             while (!bReady && !m_bCancel) {
                 Reader.Status rs = m_reader.GetStatus();
+                if (rs.status == null)
+                {
+                    //reader failure
+                    NotifyListener(ACT_CAPTURE, null, rs, null);
+                    log.info("Comparacion fallida");
+                    break;
+                }
+                
                 if (Reader.ReaderStatus.BUSY == rs.status) {
                     //if busy, wait a bit
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(1000);
                         log.info("Thread durmiendo por 1 s...");
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         break;
                     }
-                } else if (Reader.ReaderStatus.READY == rs.status || Reader.ReaderStatus.NEED_CALIBRATION == rs.status) {
+                }
+                
+                if (Reader.ReaderStatus.READY == rs.status || Reader.ReaderStatus.NEED_CALIBRATION == rs.status) {
                     //ready for capture
                     bReady = true;
                     log.info("Comparacion satisfactoria del status de la lectura de huella");
-                    break;
-                } else {
-                    //reader failure
-                    NotifyListener(ACT_CAPTURE, null, rs, null);
-                    log.info("Comparacion fallida");
                     break;
                 }
             }
@@ -190,7 +201,7 @@ public class CaptureThread extends Thread {
 
                 //stop streaming
                 m_reader.StopStreaming();
-                log.info("Lectura de huella detenida....");
+                log.trace("Lectura de huella detenida....");
             }
         } catch (UareUException e) {
             NotifyListener(ACT_CAPTURE, null, null, e);
@@ -200,7 +211,6 @@ public class CaptureThread extends Thread {
             Reader.CaptureResult cr = new Reader.CaptureResult();
             cr.quality = Reader.CaptureQuality.CANCELED;
             NotifyListener(ACT_CAPTURE, cr, null, null);
-
         }
     }
 
@@ -216,6 +226,7 @@ public class CaptureThread extends Thread {
 
         //invoke listener on EDT thread
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 m_listener.actionPerformed(evt);
 
@@ -233,6 +244,7 @@ public class CaptureThread extends Thread {
         }
     }
 
+    @Override
     public void run() {
         if (m_bStream) {
             Stream();
