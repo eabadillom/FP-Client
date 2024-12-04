@@ -1,4 +1,4 @@
-package com.hoth.fingerprint.tools;
+package com.hoth.fingerprint.exceptions;
 
 public class FingerPrintException extends Exception {
 
