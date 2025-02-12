@@ -130,7 +130,7 @@ public class RegistroLocalBL
 
         }catch(FingerPrintException | ClassNotFoundException | SQLException ex)
         {
-            log.error("Hubo un problema al registrar al empleado ", ex.getMessage());
+            log.error("Hubo un problema al registrar al empleado ", ex);
             throw new FingerPrintException("Problema al realizar la conexión");
         }finally
         {
