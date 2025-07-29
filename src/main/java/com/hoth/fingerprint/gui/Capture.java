@@ -17,7 +17,11 @@ import javax.swing.JPanel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.digitalpersona.uareu.*;
+import com.digitalpersona.uareu.Fid;
+import com.digitalpersona.uareu.Reader;
+import com.digitalpersona.uareu.ReaderCollection;
+import com.digitalpersona.uareu.UareUException;
+import com.digitalpersona.uareu.UareUGlobal;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +35,7 @@ public class Capture extends JPanel implements ActionListener {
     ReaderCollection m_Collection;
     Reader reader;
     public static Reader.CaptureResult captura;
-    
+
     private JDialog m_dlgParent;
     private CaptureThread m_capture;
     private Reader m_reader;
@@ -49,7 +53,7 @@ public class Capture extends JPanel implements ActionListener {
     public void setTiempoCaptura(int tiempoCaptura) {
         this.tiempoCaptura = tiempoCaptura;
     }
-    
+
     public static Reader.CaptureResult getCaptura() {
         return captura;
     }
@@ -58,10 +62,8 @@ public class Capture extends JPanel implements ActionListener {
         Capture.captura = captura;
     }
 
-    Capture() 
-    {
-        try 
-        {
+    Capture() {
+        try {
             m_Collection = UareUGlobal.GetReaderCollection();
             m_Collection.GetReaders();
             log.trace("Tamaño Mcollection: {}", m_Collection.size());
@@ -102,19 +104,20 @@ public class Capture extends JPanel implements ActionListener {
     }
 
     private void StartCaptureThread(JDialog dlg) {
+        captura = null;
         JLabel labelstart = new JLabel();
-        if (m_capture != null) 
-        {
-            try 
-            {
-                m_capture = new CaptureThread(m_reader, m_bStreaming, Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT);
-                m_capture.start(this, dlg);
-                labelstart.setText("Escanea tu huella.......");
-            } catch (Exception e) 
-            {
-                labelstart.setText("La huella no fue capturada");
-            }
+        if (m_capture == null) {
+            return;
         }
+
+        try {
+            m_capture = new CaptureThread(m_reader, m_bStreaming, Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT);
+            m_capture.start(this, dlg);
+            labelstart.setText("Escanea tu huella.......");
+        } catch (Exception e) {
+            labelstart.setText("La huella no fue capturada");
+        }
+
     }
 
     private void StopCaptureThread() {
@@ -136,60 +139,60 @@ public class Capture extends JPanel implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         log.trace("Entra a actionPerformed...");
-        if (e.getActionCommand().equals(CaptureThread.ACT_CAPTURE)) {
-            //event from capture thread
-            CaptureThread.CaptureEvent evt = (CaptureThread.CaptureEvent) e;
-            boolean bCanceled = false;
-            
-            if(evt.capture_result == null)
-            {
-                log.error("Error en el evt.capture_result");
-                return;
-            }
-            
-            boolean bGoodImage = false;
-            
-            if(evt.capture_result.image == null)
-            {
-                log.error("Error en el evt.capture_result.image");
-                return;
-            }
-            
-            if (m_bStreaming && (Reader.CaptureQuality.GOOD == evt.capture_result.quality || Reader.CaptureQuality.NO_FINGER == evt.capture_result.quality)) {
-                bGoodImage = true;
-            }
-            if (!m_bStreaming && Reader.CaptureQuality.GOOD == evt.capture_result.quality) {
-                bGoodImage = true;
-            }
-            
-            if (bGoodImage) {
-                //display image
-                m_image.showImage(evt.capture_result.image);
-                log.debug("imagen capturada.....");
-
-                captura = evt.capture_result;
-            }
-            
-            if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
-                //capture or streaming was canceled, just quit
-                bCanceled = true;
-                log.debug("cancelado {}", bCanceled);
-            } else {
-                //bad quality
-                log.debug(evt.capture_result.quality);
-            }
-            
-            if (null != evt.exception) {
-                //exception during capture
-                log.error("Capture", evt.exception);
-                bCanceled = true;
-            }
-            
-            if (null != evt.reader_status) {
-                log.debug(evt.reader_status);
-                bCanceled = true;
-            }
+        if (!e.getActionCommand().equals(CaptureThread.ACT_CAPTURE)) {
+            return;
         }
+        //event from capture thread
+        CaptureThread.CaptureEvent evt = (CaptureThread.CaptureEvent) e;
+        boolean bCanceled = false;
+
+        if (evt.capture_result == null) {
+            log.error("Error en el evt.capture_result");
+            return;
+        }
+
+        boolean bGoodImage = false;
+
+        if (evt.capture_result.image == null) {
+            log.error("Error en el evt.capture_result.image");
+            return;
+        }
+
+        if (m_bStreaming && (Reader.CaptureQuality.GOOD == evt.capture_result.quality || Reader.CaptureQuality.NO_FINGER == evt.capture_result.quality)) {
+            bGoodImage = true;
+        }
+        if (!m_bStreaming && Reader.CaptureQuality.GOOD == evt.capture_result.quality) {
+            bGoodImage = true;
+        }
+
+        if (bGoodImage) {
+            //display image
+            m_image.showImage(evt.capture_result.image);
+            log.debug("imagen capturada.....");
+
+            captura = evt.capture_result;
+        }
+
+        if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
+            //capture or streaming was canceled, just quit
+            bCanceled = true;
+            log.debug("cancelado {}", bCanceled);
+        } else {
+            //bad quality
+            log.debug(evt.capture_result.quality);
+        }
+
+        if (null != evt.exception) {
+            //exception during capture
+            log.error("Capture", evt.exception);
+            bCanceled = true;
+        }
+
+        if (null != evt.reader_status) {
+            log.debug(evt.reader_status);
+            bCanceled = true;
+        }
+
     }
 
     private void doModal(JDialog dlgParent) {
@@ -229,7 +232,7 @@ public class Capture extends JPanel implements ActionListener {
             m_dlgParent.dispose();
             m_dlgParent.setDefaultCloseOperation(dlgParent.HIDE_ON_CLOSE);
             m_dlgParent.setVisible(true);
-            
+
             //cancel capture
             StopCaptureThread();
 
