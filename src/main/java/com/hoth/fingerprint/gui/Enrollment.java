@@ -31,11 +31,11 @@ public class Enrollment extends JPanel implements ActionListener
     public static byte[] biometrico = null;
     public static Fmd fmd = null;
     ReaderCollection m_Collection;
-    
+
     public static Fmd getFmd() {
         return fmd;
     }
-    
+
     public static void setFmd(Fmd fmd) {
         Enrollment.fmd = fmd;
     }
@@ -47,17 +47,17 @@ public class Enrollment extends JPanel implements ActionListener
     public static void setBiometrico(byte[] biometrico) {
         Enrollment.biometrico = biometrico;
     }
-    
+
     public class EnrollmentThread extends Thread implements Engine.EnrollmentCallback 
-    {    
+    {
         public static final String ACT_PROMPT = "enrollment_prompt";
         public static final String ACT_CAPTURE = "enrollment_capture";
         public static final String ACT_FEACTURES = "enrollment_feature";
         public static final String ACT_DONE = "enrollment_done";
         public static final String ACT_CANCELED = "enrollment_canceled";
 
-        public class EnrollmentEvent extends ActionEvent {
-
+        public class EnrollmentEvent extends ActionEvent 
+        {
             private static final long serialVersionUID = 102;
 
             public Reader.CaptureResult capture_result;
@@ -65,8 +65,8 @@ public class Enrollment extends JPanel implements ActionListener
             public UareUException exception;
             public Fmd enrollment_fmd;
 
-            public EnrollmentEvent(Object source, String action, Fmd fmd, Reader.CaptureResult cr, Reader.Status st,
-                    UareUException ex) {
+            public EnrollmentEvent(Object source, String action, Fmd fmd, Reader.CaptureResult cr, Reader.Status st, UareUException ex) 
+            {
                 super(source, ActionEvent.ACTION_PERFORMED, action);
 
                 capture_result = cr;
@@ -98,6 +98,7 @@ public class Enrollment extends JPanel implements ActionListener
             m_listener = listener;
         }
 
+        @Override
         public Engine.PreEnrollmentFmd GetFmd(Fmd.Format format) 
         {
             log.trace("Levante el lector ....................");
@@ -119,23 +120,23 @@ public class Enrollment extends JPanel implements ActionListener
                 // check result
                 EnrollmentCaptureThread.CaptureEvent evt = m_capture.getLastCaptureEvent();
                 log.trace("evento {}", evt.getActionCommand());
-                
-                if (null == evt.capture_result)
+
+                if (null == evt.capture_result) 
                 {
                     // send capture error
                     log.trace("evento ev fue null");
                     SendToListener(ACT_CAPTURE, null, evt.capture_result, evt.reader_status, evt.exception);
                     break;
                 }
-                
+
                 if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) 
                 {
                     // captura cancelada, retorna nulo
                     log.info("La captura fue cancelada");
                     break;
                 }
-                
-                if (null == evt.capture_result.image && Reader.CaptureQuality.GOOD != evt.capture_result.quality)
+
+                if (null == evt.capture_result.image && Reader.CaptureQuality.GOOD != evt.capture_result.quality) 
                 {
                     // send quiality result
                     log.info("La imagen es null o la calidad no es GOOD");
@@ -143,44 +144,45 @@ public class Enrollment extends JPanel implements ActionListener
                     break;
                 }
                 
-                if (null != evt.capture_result.image && Reader.CaptureQuality.GOOD == evt.capture_result.quality) 
-                {
-                    // acquire engine
-                    Engine engine = UareUGlobal.GetEngine();
-                    try {
-                        // extract features
-                        Fmd fmd = engine.CreateFmd(evt.capture_result.image, Fmd.Format.ANSI_378_2004);
+                if(evt.capture_result.image == null && Reader.CaptureQuality.GOOD != evt.capture_result.quality) 
+                    break;
 
-                        // return prefmd
-                        prefmd = new Engine.PreEnrollmentFmd();
-                        prefmd.fmd = fmd;
-                        prefmd.view_index = 0;
+                // acquire engine
+                Engine engine = UareUGlobal.GetEngine();
+                try {
+                    // extract features
+                    Fmd fmd = engine.CreateFmd(evt.capture_result.image, Fmd.Format.ANSI_378_2004);
 
-                        // send sucess
-                        SendToListener(ACT_FEACTURES, null, null, null, null);
-                        log.trace("Se extrajo el FMD correctamente");
-                    } catch (UareUException e) {
-                        // send extraction error
-                        log.error("Error al extraer FMD", e);
-                        SendToListener(ACT_FEACTURES, null, null, null, e);
-                    }
+                    // return prefmd
+                    prefmd = new Engine.PreEnrollmentFmd();
+                    prefmd.fmd = fmd;
+                    prefmd.view_index = 0;
+
+                    // send sucess
+                    SendToListener(ACT_FEACTURES, null, null, null, null);
+                    log.trace("Se extrajo el FMD correctamente");
+                } catch (UareUException e) {
+                    // send extraction error
+                    log.error("Error al extraer FMD", e);
+                    SendToListener(ACT_FEACTURES, null, null, null, e);
                 }
-                
+
             }
             log.trace("Sali del metodo getFMD para ir al actionperformand");
 
             return prefmd;
         }
 
-        public void cancel() {
+        public void cancel() 
+        {
             m_bCancel = true;
-            if (null != m_capture)
+            if (null != m_capture) 
                 m_capture.cancel();
         }
 
-        private void SendToListener(String action, Fmd fmd, Reader.CaptureResult cr, Reader.Status st,
-                UareUException ex) {
-            if (null == m_listener || null == action || action.equals(""))
+        private void SendToListener(String action, Fmd fmd, Reader.CaptureResult cr, Reader.Status st, UareUException ex) 
+        {
+            if (null == m_listener || null == action || action.equals("")) 
                 return;
             final EnrollmentEvent evt = new EnrollmentEvent(this, action, fmd, cr, st, ex);
             // invoke listener on EDT thread
@@ -214,7 +216,7 @@ public class Enrollment extends JPanel implements ActionListener
                         SendToListener(ACT_DONE, fmd, null, null, null);
                         break;//se añadio break
                     }
-                    
+
                     if(null == fmd){
                         SendToListener(ACT_CANCELED, null, null, null, null);
                         break;
@@ -238,7 +240,7 @@ public class Enrollment extends JPanel implements ActionListener
     private boolean m_bJustStarted;
 
     public Enrollment() //Quitamos parametro READER
-    { 
+    {
         try {
             m_Collection = UareUGlobal.GetReaderCollection();
             m_Collection.GetReaders();
@@ -315,16 +317,16 @@ public class Enrollment extends JPanel implements ActionListener
             // cancel enrollment if any exception or bad reader status
             if (null != evt.exception) {
                 m_dlgParent.setVisible(false);
-            } 
-            
+            }
+
             if (null != evt.reader_status && Reader.ReaderStatus.READY != evt.reader_status.status
                     && Reader.ReaderStatus.NEED_CALIBRATION != evt.reader_status.status) {
                 m_dlgParent.setVisible(false);
             }
         }
     }
-    
-    private void EnrollmentEventPrompt()
+
+    private void EnrollmentEventPrompt() 
     {
         log.info("Entre a la accion ACT_PROMPT...................");
         if (m_bJustStarted) {
@@ -332,29 +334,31 @@ public class Enrollment extends JPanel implements ActionListener
             m_text.append("Coloca tu dedo en el lector \n");
         } else {
             m_text.append("Coloca el mismo dedo en el lector \n");
-        }   m_bJustStarted = false;
+        }
+        m_bJustStarted = false;
     }
-    
-    private void EnrollmentEventCaptura(EnrollmentThread.EnrollmentEvent evt)
+
+    private void EnrollmentEventCaptura(EnrollmentThread.EnrollmentEvent evt) 
     {
         if (null != evt.capture_result) 
         {
-            MessageBox.BadQuality(evt.capture_result.quality);    
-        } 
+            MessageBox.badQuality(evt.capture_result.quality);
+        }
 
         if (null != evt.exception) 
         {
-            MessageBox.DpError(evt.exception.getMessage(), evt.exception); //error 21
+            MessageBox.dpError(evt.exception.getMessage(), evt.exception); //error 21
             log.info(evt.exception.getStackTrace());
-        } 
+        }
 
         if (null != evt.reader_status) 
         {
-            MessageBox.BadStatus(evt.reader_status);
-        }   m_bJustStarted = false;
+            MessageBox.badStatus(evt.reader_status);
+        }   
+        m_bJustStarted = false;
     }
-    
-    private void EnrollmentEventFeature(EnrollmentThread.EnrollmentEvent evt)
+
+    private void EnrollmentEventFeature(EnrollmentThread.EnrollmentEvent evt) 
     {
         log.info("Entre a la accion ACT_FEACTURES...................");
         if (null == evt.exception) {
@@ -362,34 +366,32 @@ public class Enrollment extends JPanel implements ActionListener
         }
 
         if(null != evt.exception){
-            MessageBox.DpError("Enrollment extraction", evt.exception);
+            MessageBox.dpError("Enrollment extraction", evt.exception);
             //JOptionPane.showMessageDialog(f, "WARNING");
-        }   m_bJustStarted = false;
-    }
-    
-    private void EnrollmentEventDone(EnrollmentThread.EnrollmentEvent evt)
-    {
-        if (null == evt.exception) {
-            String str = String.format("Plantilla creada, tamaño: %d \n\n\n",
-                    evt.enrollment_fmd.getData().length);
-            log.info("Huella capturada: {}", evt.enrollment_fmd.getData());
-            m_text.append(str);
-            try {
-                fmd = evt.enrollment_fmd;
-                biometrico = evt.enrollment_fmd.getData();
-                //m_enrollment.cancel();
-                m_reader.Close();
-
-                //m_dlgParent.setVisible(false);
-            } catch (UareUException e1) {
-                e1.printStackTrace();
-            }
         }
+        m_bJustStarted = false;
+    }
 
-        if(null != evt.exception){
-            MessageBox.DpError("Enrollment template creation", evt.exception);
-            //JOptionPane.showMessageDialog(f, "Error H");
-        }   
+    private void EnrollmentEventDone(EnrollmentThread.EnrollmentEvent evt) 
+    {
+        if (null != evt.exception) {
+            MessageBox.dpError("Enrollment template creation", evt.exception);
+            return;
+        }
+        String str = String.format("Plantilla creada, tamaño: %d \n\n\n", evt.enrollment_fmd.getData().length);
+        log.info("Huella capturada: {}", evt.enrollment_fmd.getData());
+        m_text.append(str);
+        try {
+            fmd = evt.enrollment_fmd;
+            biometrico = evt.enrollment_fmd.getData();
+            //m_enrollment.cancel();
+            m_reader.Close();
+
+            //m_dlgParent.setVisible(false);
+        } catch (UareUException e1) {
+            e1.printStackTrace();
+        }
+        
         m_bJustStarted = true;
     }
 
@@ -406,7 +408,7 @@ public class Enrollment extends JPanel implements ActionListener
 				e.printStackTrace();
 			}
 	}*/
-///revisar abajo
+    ///revisar abajo
     private void doModal(JDialog dlgParent) 
     {
         // open reader
@@ -414,14 +416,14 @@ public class Enrollment extends JPanel implements ActionListener
             m_reader.Open(Reader.Priority.COOPERATIVE);
         } catch (UareUException e) {
             //JOptionPane.showMessageDialog(f, "DO modal");
-            MessageBox.DpError("Reader.Open()", e);
+            MessageBox.dpError("Reader.Open()", e);
             log.error("Reader.Reader() {}", e.toString());
         }
 
         //COMIENZA ENROLAMIENTO DE HILO
         log.info("Entro al metodo run de CaptureThread");
         m_enrollment.start();
-        
+
         // bring up modal dialog
         m_dlgParent = dlgParent;
         m_dlgParent.setContentPane(this);
@@ -435,11 +437,11 @@ public class Enrollment extends JPanel implements ActionListener
         m_dlgParent.setVisible(false);
         //StopCaptureThread();
         //WaitForCaptureThread();
-        
+
         try {
             UareUGlobal.DestroyReaderCollection();
         } catch (UareUException e) {
-            MessageBox.DpError("UareUGlobal.destroyReaderCollection()", e);
+            MessageBox.dpError("UareUGlobal.destroyReaderCollection()", e);
         }
 
         // close reader
@@ -451,7 +453,7 @@ public class Enrollment extends JPanel implements ActionListener
             log.error("Error al tratar de terminar la captura: {}", e);
         }*/
     }
-    
+
     public static void Run() {
         log.info("Entre a metodo run de Enrollment");
         JDialog dlg = new JDialog((JDialog) null, "Registro", true);
