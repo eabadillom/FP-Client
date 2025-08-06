@@ -1,11 +1,12 @@
 package com.hoth.fingerprint.gui;
 
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowFocusListener;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -13,6 +14,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.WindowConstants;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,30 +28,23 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class Capture extends JPanel implements ActionListener {
+public class Capture extends JPanel implements ActionListener 
+{
+    private static final Logger log = LogManager.getLogger(Capture.class);
+    private static final long serialVersionUID = 2L;
 
-    private static Logger log = LogManager.getLogger(Capture.class);
-    private static final long serialVersionUID = 2;
-    //private static final String ACT_BACK = "back";
+    private static Reader.CaptureResult captura;
 
-    ReaderCollection m_Collection;
-    Reader reader;
-    public static Reader.CaptureResult captura;
-
-    private JDialog m_dlgParent;
-    private CaptureThread m_capture;
-    private Reader m_reader;
-    private ImagePanel m_image;
-    private boolean m_bStreaming = false;
-    private JLabel label;
+    private final Reader reader;
+    private CaptureThread captureThread;
+    private final boolean streaming = false;
+    private JDialog dialog;
+    private ImagePanel imagePanel;
+    private JLabel infoLabel;
     private JLabel focusLabel;
     private ScheduledExecutorService scheduler;
     private int tiempoCaptura;
-
-    public int getTiempoCaptura() {
-        return tiempoCaptura;
-    }
-
+    
     public void setTiempoCaptura(int tiempoCaptura) {
         this.tiempoCaptura = tiempoCaptura;
     }
@@ -58,207 +53,161 @@ public class Capture extends JPanel implements ActionListener {
         return captura;
     }
 
-    public static void setCaptura(Reader.CaptureResult captura) {
-        Capture.captura = captura;
+    Capture() {
+        this.reader = initializarLectora();
+        this.captureThread = new CaptureThread(reader, streaming, Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT);
+        construirInterfaz();
     }
 
-    Capture() {
+    private Reader initializarLectora() 
+    {
         try {
-            m_Collection = UareUGlobal.GetReaderCollection();
-            m_Collection.GetReaders();
-            log.trace("Tamaño Mcollection: {}", m_Collection.size());
-            log.debug("Nombre del lector es: {}", m_Collection.get(0).GetDescription().name);
-            m_reader = m_Collection.get(0);
+            ReaderCollection readers = UareUGlobal.GetReaderCollection();
+            readers.GetReaders();
+            log.trace("Cantidad de lectores: {}", readers.size());
+            Reader r = readers.get(0);
+            log.debug("Lector detectado: {}", r.GetDescription().name);
+            return r;
         } catch (UareUException e) {
-            log.error("UareUGlobal.getReaderCollection() {}", e);
-            return;
+            log.error("Error al obtener el lector de huella", e);
+            throw new RuntimeException("No se puedo inicializar el lector de huellas");
         }
+    }
 
-        m_capture = new CaptureThread(m_reader, m_bStreaming, Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT);
-
+    private void construirInterfaz() 
+    {
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         final int vgap = 5;
-        BoxLayout layout = new BoxLayout(this, BoxLayout.Y_AXIS);
-        setLayout(layout);
 
-        focusLabel = new JLabel();
+        focusLabel = crearEtiqueta("Toque esta ventana para continuar.", "/images/information.png");
         focusLabel.setName("focusLabel");
-        focusLabel.setSize(200, 200);
-        focusLabel.setIcon(new ImageIcon(getClass().getResource("/images/information.png")));
-        focusLabel.setText("Toque esta ventana para continuar.");
-        focusLabel.setFont(new Font("Tahoma", Font.BOLD, 18));
         add(focusLabel);
 
-        m_image = new ImagePanel();
-        Dimension dm = new Dimension(400, 500);
-        m_image.setPreferredSize(dm);
-        add(m_image);
+        imagePanel = new ImagePanel();
+        imagePanel.setPreferredSize(new Dimension(400, 500));
+        add(imagePanel);
         add(Box.createVerticalStrut(vgap));
 
-        label = new JLabel();
-        label.setName("label1");
-        label.setSize(200, 200);
-        label.setIcon(new ImageIcon(getClass().getResource("/images/huella.gif")));
-        label.setText("Coloca tu huella en el lector");
-        label.setFont(new Font("Tahoma", Font.BOLD, 18));
-        add(label);
+        infoLabel = crearEtiqueta("Coloca tu huella en el lector", "/images/huella.gif");
+        infoLabel.setName("label1");
+        add(infoLabel);
     }
 
-    private void StartCaptureThread(JDialog dlg) {
+    private JLabel crearEtiqueta(String text, String iconPath) 
+    {
+        JLabel label = new JLabel(text, new ImageIcon(getClass().getResource(iconPath)), JLabel.CENTER);
+        label.setSize(200, 200);
+        label.setFont(new Font("Tahoma", Font.BOLD, 18));
+        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+        return label;
+    }
+
+    private void startCapture(JDialog dlg) 
+    {
         captura = null;
-        JLabel labelstart = new JLabel();
-        if (m_capture == null) {
-            return;
-        }
+        if (captureThread == null) return;
 
         try {
-            m_capture = new CaptureThread(m_reader, m_bStreaming, Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT);
-            m_capture.start(this, dlg);
-            labelstart.setText("Escanea tu huella.......");
+            captureThread = new CaptureThread(reader, streaming, Fid.Format.ANSI_381_2004, Reader.ImageProcessing.IMG_PROC_DEFAULT);
+            captureThread.start(this, dlg);
+            infoLabel.setText("Escanea tu huella...");
         } catch (Exception e) {
-            labelstart.setText("La huella no fue capturada");
-        }
-
-    }
-
-    private void StopCaptureThread() {
-        if (null != m_capture) {
-            m_capture.cancel();
+            infoLabel.setText("La huella no fue capturada");
+            log.error("Error iniciando captura", e);
         }
     }
 
-    private void WaitForCaptureThread() {
-        if (null != m_capture) {
-            m_capture.join(1000);
+    private void stopCaptureThread() 
+    {
+        if (captureThread != null) {
+            captureThread.cancel();
         }
     }
 
-    public static Reader.CaptureResult Captura(Reader.CaptureResult rc) {
-        return rc;
+    private void waitForCaptureThread() 
+    {
+        if (captureThread != null) {
+            captureThread.join(1000);
+        }
     }
 
     @Override
-    public void actionPerformed(ActionEvent e) {
-        log.trace("Entra a actionPerformed...");
-        if (!e.getActionCommand().equals(CaptureThread.ACT_CAPTURE)) {
-            return;
-        }
-        //event from capture thread
+    public void actionPerformed(ActionEvent e) 
+    {
+        if (!CaptureThread.ACT_CAPTURE.equals(e.getActionCommand())) return;
+
+        log.trace("Evento de captura recibido");
+
         CaptureThread.CaptureEvent evt = (CaptureThread.CaptureEvent) e;
-        boolean bCanceled = false;
+        Reader.CaptureResult result = evt.captureResult;
 
-        if (evt.capture_result == null) {
-            log.error("Error en el evt.capture_result");
+        if (result == null || result.image == null) {
+            log.error("Resultado o imagen de captura es null");
             return;
         }
 
-        boolean bGoodImage = false;
+        boolean goodQuality = streaming
+                ? (result.quality == Reader.CaptureQuality.GOOD || result.quality == Reader.CaptureQuality.NO_FINGER)
+                : result.quality == Reader.CaptureQuality.GOOD;
 
-        if (evt.capture_result.image == null) {
-            log.error("Error en el evt.capture_result.image");
-            return;
+        if (goodQuality) {
+            imagePanel.showImage(result.image);
+            log.debug("Imagen capturada correctamente...");
+            captura = result;
         }
 
-        if (m_bStreaming && (Reader.CaptureQuality.GOOD == evt.capture_result.quality || Reader.CaptureQuality.NO_FINGER == evt.capture_result.quality)) {
-            bGoodImage = true;
+        if (result.quality == Reader.CaptureQuality.CANCELED || evt.exception != null || evt.readerStatus != null) {
+            log.debug("Captura cancelada o con error");
         }
-        if (!m_bStreaming && Reader.CaptureQuality.GOOD == evt.capture_result.quality) {
-            bGoodImage = true;
-        }
-
-        if (bGoodImage) {
-            //display image
-            m_image.showImage(evt.capture_result.image);
-            log.debug("imagen capturada.....");
-
-            captura = evt.capture_result;
-        }
-
-        if (Reader.CaptureQuality.CANCELED == evt.capture_result.quality) {
-            //capture or streaming was canceled, just quit
-            bCanceled = true;
-            log.debug("cancelado {}", bCanceled);
-        } else {
-            //bad quality
-            log.debug(evt.capture_result.quality);
-        }
-
-        if (null != evt.exception) {
-            //exception during capture
-            log.error("Capture", evt.exception);
-            bCanceled = true;
-        }
-
-        if (null != evt.reader_status) {
-            log.debug(evt.reader_status);
-            bCanceled = true;
-        }
-
     }
 
-    private void doModal(JDialog dlgParent) {
-        //open reader
+    private void mostrarDialogo(JDialog parent) 
+    {
         try {
-            m_reader.Open(Reader.Priority.COOPERATIVE);
+            reader.Open(Reader.Priority.COOPERATIVE);
         } catch (UareUException e) {
-            log.info("Reader.Open()", e);
+            log.warn("No se pudo abrir el lector", e);
+            return;
         }
 
-        boolean bOk = true;
-        if (m_bStreaming) {
-            //check if streaming supported
-            Reader.Capabilities rc = m_reader.GetCapabilities();
-            if (null != rc && !rc.can_stream) {
-                log.info("El lector de huella no admite el streaming");
-                bOk = false;
-            }
+        if (streaming && !reader.GetCapabilities().can_stream) {
+            log.info("El lector no admite streaming");
+            return;
         }
 
-        if (bOk) {
-            //start capture thread
-            StartCaptureThread(dlgParent);
-            // Crear un programador que detenga la captura después de 10 segundos
-            scheduler = Executors.newScheduledThreadPool(1);
-            scheduler.schedule(this::stopCapture, tiempoCaptura, TimeUnit.MILLISECONDS);
-            //bring up modal dialog
-            m_dlgParent = dlgParent;
+        this.dialog = parent;
+        startCapture(dialog);
 
-            m_dlgParent.setContentPane(this);
-            m_dlgParent.setAlwaysOnTop(true);
-            m_dlgParent.pack();
-            m_dlgParent.setLocationRelativeTo(null);
-            m_dlgParent.setSize(400, 550); //Tamaño original del dialog
-            //m_dlgParent.setSize(10, 10);
-            m_dlgParent.toFront();
-            m_dlgParent.dispose();
-            m_dlgParent.setDefaultCloseOperation(dlgParent.HIDE_ON_CLOSE);
-            m_dlgParent.setVisible(true);
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.schedule(this::stopCapture, tiempoCaptura, TimeUnit.MILLISECONDS);
 
-            //cancel capture
-            StopCaptureThread();
+        dialog.setContentPane(this);
+        dialog.setAlwaysOnTop(true);
+        dialog.setSize(400, 550);
+        dialog.setLocationRelativeTo(null);
+        dialog.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+        dialog.setVisible(true);
 
-            //wait for capture thread to finish
-            WaitForCaptureThread();
-        }
+        stopCaptureThread();
+        waitForCaptureThread();
 
         try {
             UareUGlobal.DestroyReaderCollection();
         } catch (UareUException e) {
-            MessageBox.DpError("UareUGlobal.destroyReaderCollection()", e);
+            MessageBox.dpError("UareUGlobal.destroyReaderCollection()", e);
         }
-
     }
 
-    public void stopCapture() {
-        if (m_reader != null) {
-            try {
-                m_reader.CancelCapture();
-                //m_reader.Close();
-                m_dlgParent.setVisible(false);
-                log.info("Captura detenida");
-            } catch (UareUException e) {
-                log.error("Error al tratar de detener la captura: {}", e.getCode());
-            }
+    public void stopCapture() 
+    {
+        try {
+            if(reader != null) reader.CancelCapture();
+            if(dialog != null) dialog.setVisible(false);
+            log.info("Captura detenida correctamente");
+        } catch (UareUException e) {
+            log.error("Error al detener la captura: {}", e.getCode());
         }
+
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.shutdown();
         }
@@ -274,24 +223,26 @@ public class Capture extends JPanel implements ActionListener {
         revalidate();
     }
 
-    public static void Run(int tiempoCaptura) {
-        JDialog dlg = new JDialog((JDialog) null, "Lectura de huella", true);
-        ImageIcon icon = new ImageIcon(Capture.class.getResource("/images/FP-Client.png"));
-        dlg.setIconImage(icon.getImage());
-        Capture capture = new Capture();
-        capture.setTiempoCaptura(tiempoCaptura);
-        dlg.addWindowFocusListener(new WindowFocusListener() {
+    public static void Run(int tiempoCaptura) 
+    {
+        JDialog dialog = new JDialog((JDialog) null, "Lectura de huella", true);
+        dialog.setIconImage(new ImageIcon(Capture.class.getResource("/images/FP-Client.png")).getImage());
+
+        Capture capturePanel = new Capture();
+        capturePanel.setTiempoCaptura(tiempoCaptura);
+
+        dialog.addWindowFocusListener(new WindowAdapter() {
             @Override
             public void windowLostFocus(WindowEvent e) {
-                capture.addFocusLabel();
+                capturePanel.addFocusLabel();
             }
 
+            @Override
             public void windowGainedFocus(WindowEvent e) {
-                capture.removeFocusLabel();
+                capturePanel.removeFocusLabel();
             }
         });
 
-        capture.doModal(dlg);
+        capturePanel.mostrarDialogo(dialog);
     }
-
 }
