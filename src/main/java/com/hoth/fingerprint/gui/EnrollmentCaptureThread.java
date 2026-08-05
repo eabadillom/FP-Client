@@ -10,13 +10,13 @@ import com.digitalpersona.uareu.Fid;
 import com.digitalpersona.uareu.Reader;
 import com.digitalpersona.uareu.UareUException;
 
-public class EnrollmentCaptureThread extends Thread {
-
+public class EnrollmentCaptureThread extends Thread 
+{    
     public static final String ACT_CAPTURE = "capture_thread_captured";
     private static Logger log = LogManager.getLogger(CaptureThread.class);
 
-    public class CaptureEvent extends ActionEvent {
-
+    public class CaptureEvent extends ActionEvent 
+    {        
         private static final long serialVersionUID = 101;
         public Reader.CaptureResult capture_result;
         public Reader.Status reader_status;
@@ -50,7 +50,7 @@ public class EnrollmentCaptureThread extends Thread {
 
     public void start(ActionListener listener) 
     {
-        try
+        try 
         {
             Thread.sleep(1000);
             m_listener = listener;
@@ -61,7 +61,8 @@ public class EnrollmentCaptureThread extends Thread {
         }
     }
 
-    public void join(int milliseconds) {
+    public void join(int milliseconds) 
+    {
         try {
             super.join(milliseconds);
         } catch (InterruptedException e) {
@@ -80,15 +81,15 @@ public class EnrollmentCaptureThread extends Thread {
         {
             //wait for reader to become ready
             bLectorListo = estadoEnEspera(bLectorListo);
-            
-            if(m_bCancel)
+
+            if(m_bCancel) 
             {
                 Reader.CaptureResult cr = new Reader.CaptureResult();
                 cr.quality = Reader.CaptureQuality.CANCELED;
                 NotifyListener(ACT_CAPTURE, cr, null, null);
                 log.info("Captura cancelada.....");
             }
-            
+
             estadoEnListo(bLectorListo);
             
         } catch (UareUException e) 
@@ -100,14 +101,14 @@ public class EnrollmentCaptureThread extends Thread {
             Thread.currentThread().interrupt(); // Mantén el estado de interrupción del hilo
         }
     }
-    
-    private void estadoEnListo(boolean bLectorListo) throws UareUException
+
+    private void estadoEnListo(boolean bLectorListo) throws UareUException 
     {
         if (bLectorListo == false) 
         {
             return;
         }
-        
+
         //capture
         log.info("Iniciando captura de huella para enrolamiento");
         log.trace("Format: {}", m_format);
@@ -116,8 +117,8 @@ public class EnrollmentCaptureThread extends Thread {
         log.trace("Resolucion {}", m_reader.GetCapabilities().resolutions[0]);
 
         int resolution = m_reader.GetCapabilities().resolutions != null && m_reader.GetCapabilities().resolutions.length > 0
-            ? m_reader.GetCapabilities().resolutions[0]
-            : -1;
+                ? m_reader.GetCapabilities().resolutions[0]
+                : -1;
 
         if (resolution == -1) 
         {
@@ -130,7 +131,7 @@ public class EnrollmentCaptureThread extends Thread {
         log.info("Huella capturada....");
         //log.info("valor de la huella detectada {}",cr);
     }
-    
+
     private void estadoActualLector(int resolucionImagen) throws UareUException 
     {
         try 
@@ -144,7 +145,7 @@ public class EnrollmentCaptureThread extends Thread {
                 Thread.sleep(1000); // Pausa breve para evitar el consumo excesivo de recursos
             }
 
-            if(Reader.ReaderStatus.READY == m_reader.GetStatus().status)
+            if(Reader.ReaderStatus.READY == m_reader.GetStatus().status) 
             {
                 log.debug("Entre a capturar huellas");
                 Reader.CaptureResult cr = null;
@@ -167,22 +168,22 @@ public class EnrollmentCaptureThread extends Thread {
             Thread.currentThread().interrupt(); // Mantén el estado de interrupción del hilo
         }
     }
-    
-    private boolean estadoEnEspera(boolean bLectorListo) throws UareUException, InterruptedException
+
+    private boolean estadoEnEspera(boolean bLectorListo) throws UareUException, InterruptedException 
     {
         while (!bLectorListo && !m_bCancel) 
         {
             log.info("Estado del lector: {}", m_reader.GetStatus());
             Reader.Status rs = m_reader.GetStatus();
-            
+
             if (rs.status == null) 
             {
                 //reader failure
                 NotifyListener(ACT_CAPTURE, null, rs, null);
                 log.info("Captura fallida...");
                 break;
-            } 
-            
+            }
+
             switch (rs.status) 
             {
                 case BUSY:
@@ -211,7 +212,7 @@ public class EnrollmentCaptureThread extends Thread {
         {
             Reader.Status rs = m_reader.GetStatus();
             boolean bLectorListo = false;
-            
+
             while (!bLectorListo && !m_bCancel) 
             {
                 if (null == rs.status) 
@@ -220,14 +221,14 @@ public class EnrollmentCaptureThread extends Thread {
                     NotifyListener(ACT_CAPTURE, null, rs, null);
                     log.info("Comparacion fallida");
                     break;
-                } 
-                
+                }
+
                 switch (rs.status) 
                 {
                     case BUSY:
                         //if busy, wait a bit
                         Thread.sleep(1000);
-                        log.info("Hilo durmiendo por 1 s..."); 
+                        log.info("Hilo durmiendo por 1 s...");
                         break;
                     case READY:
                     case NEED_CALIBRATION:
@@ -242,7 +243,7 @@ public class EnrollmentCaptureThread extends Thread {
                         break;
                 }
             }
-            
+
             if (m_bCancel) 
             {
                 Reader.CaptureResult cr = new Reader.CaptureResult();
@@ -251,23 +252,22 @@ public class EnrollmentCaptureThread extends Thread {
                 log.info("Captura cancelada.....");
             }
             
-            if (bLectorListo) 
-            {
-                //start streaming
-                m_reader.StartStreaming();
-                log.info("Lectura de huella en curso");
-                //get images
-                while (!m_bCancel) 
-                {
-                    Reader.CaptureResult cr = m_reader.GetStreamImage(m_format, m_proc, m_reader.GetCapabilities().resolutions[0]);
-                    NotifyListener(ACT_CAPTURE, cr, null, null);
-                    log.info("Lectura exitosa");
-                }
+            if (!bLectorListo) return;
 
-                //stop streaming
-                m_reader.StopStreaming();
-                log.info("Lectura de huella detenida....");
+            //start streaming
+            m_reader.StartStreaming();
+            log.info("Lectura de huella en curso");
+            //get images
+            while (!m_bCancel) 
+            {
+                Reader.CaptureResult cr = m_reader.GetStreamImage(m_format, m_proc, m_reader.GetCapabilities().resolutions[0]);
+                NotifyListener(ACT_CAPTURE, cr, null, null);
+                log.info("Lectura exitosa");
             }
+
+            //stop streaming
+            m_reader.StopStreaming();
+            log.info("Lectura de huella detenida....");
         } catch (UareUException e) 
         {
             NotifyListener(ACT_CAPTURE, null, null, e);
@@ -275,10 +275,11 @@ public class EnrollmentCaptureThread extends Thread {
         {
             log.error("Error en la interrupcion de thread {}", e.getMessage());
         }
-        
+
     }
 
-    private void NotifyListener(String action, Reader.CaptureResult cr, Reader.Status st, UareUException ex) {
+    private void NotifyListener(String action, Reader.CaptureResult cr, Reader.Status st, UareUException ex) 
+    {
         final CaptureEvent evt = new CaptureEvent(this, action, cr, st, ex);
 
         //store last capture event
@@ -298,7 +299,8 @@ public class EnrollmentCaptureThread extends Thread {
         });
     }
 
-    public void cancel() {
+    public void cancel() 
+    {
         m_bCancel = true;
         try {
             if (!m_bStream) {
@@ -310,7 +312,8 @@ public class EnrollmentCaptureThread extends Thread {
     }
 
     @Override
-    public void run() {
+    public void run() 
+    {
         if (m_bStream) {
             Stream();
         } else {
