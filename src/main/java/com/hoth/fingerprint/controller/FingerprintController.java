@@ -97,7 +97,7 @@ public class FingerprintController {
                         {
                             Capture.Run(propiedadesSGP.getCaptureTimeout()*1000);
                         }
-                    
+                        
                         captura = Capture.getCaptura();
 
                         Engine engine = UareUGlobal.GetEngine();
